@@ -47,6 +47,73 @@ def _country_title(iso3: str, region_label: Optional[str] = None) -> str:
     return f"A Tiled Map of {name}"
 
 
+def _prepare_custom_gdf(
+    gdf: gpd.GeoDataFrame,
+    region_col: str,
+) -> gpd.GeoDataFrame:
+    """
+    Validate and normalise a user-supplied GeoDataFrame into the standard
+    ``region_id | region_name | geometry`` schema used internally.
+
+    Parameters
+    ----------
+    gdf:
+        Any GeoDataFrame with polygon geometries and at least one name column.
+        CRS can be anything — it will be re-projected to LAEA in ``build()``.
+    region_col:
+        Name of the column to use as the region label (e.g. ``'NAME_1'``,
+        ``'district'``, ``'state'``).
+
+    Returns
+    -------
+    GeoDataFrame with columns ``region_id``, ``region_name``, ``geometry``
+    in the original CRS (re-projection happens later in the pipeline).
+    """
+    import shapely as _shapely
+
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise TypeError(
+            f"gdf must be a GeoDataFrame, got {type(gdf).__name__!r}."
+        )
+    if region_col not in gdf.columns:
+        available = [c for c in gdf.columns if c != "geometry"]
+        raise ValueError(
+            f"Column {region_col!r} not found in GeoDataFrame. "
+            f"Available columns: {available}"
+        )
+    if "geometry" not in gdf.columns or gdf.geometry.is_empty.all():
+        raise ValueError("GeoDataFrame has no usable geometry column.")
+
+    # Drop rows with null geometry or null region name
+    out = gdf[[region_col, "geometry"]].copy()
+    out = out[out["geometry"].notna() & out[region_col].notna()].copy()
+    out = out[~out["geometry"].is_empty].copy()
+
+    if out.empty:
+        raise ValueError(
+            "GeoDataFrame has no rows with valid geometry and non-null "
+            f"values in column {region_col!r}."
+        )
+
+    # Repair geometries
+    out["geometry"] = _shapely.make_valid(out["geometry"].values)
+
+    # Rename to standard schema
+    out = out.rename(columns={region_col: "region_name"})
+    out["region_name"] = out["region_name"].astype(str).str.strip()
+    out["region_id"] = range(len(out))
+    out = out[["region_id", "region_name", "geometry"]].reset_index(drop=True)
+
+    # project_regions expects WGS84 geographic coordinates for its median
+    # centroid calculation — reproject if necessary.
+    result = gpd.GeoDataFrame(out, geometry="geometry", crs=gdf.crs)
+    if gdf.crs is not None and not gdf.crs.is_geographic:
+        result = result.to_crs("EPSG:4326")
+    elif gdf.crs is None:
+        result = result.set_crs("EPSG:4326", allow_override=True)
+    return result
+
+
 class AreaGrid:
     """
     Population grid map for any country.
@@ -77,12 +144,22 @@ class AreaGrid:
         cluster_distance_km: float = 200.0,
         palette: str | list[str] = "qual",
         dissolve_by: Optional[str] = "auto",
+        title: Optional[str] = None,
+        subtitle: Optional[str] = None,
+        data_source: Optional[str] = None,
     ) -> None:
         self.country_iso3 = country_iso3.strip().upper()
         self.n = n
         self.cluster_distance_km = cluster_distance_km
         self.palette = palette
         self.dissolve_by = dissolve_by
+        self.title = title
+        self.subtitle = subtitle
+        self.data_source = data_source
+
+        # Custom GeoDataFrame path (from_geodataframe)
+        self._custom_gdf: Optional[gpd.GeoDataFrame] = None
+        self._custom_region_col: Optional[str] = None
 
         # Internal state – populated by build()
         self._regions_wgs84: Optional[gpd.GeoDataFrame] = None
@@ -101,12 +178,18 @@ class AreaGrid:
         Called automatically on the first call to :meth:`plot` or any
         property accessor.  Safe to call explicitly for eager loading.
         """
-        # 1. Load Natural Earth admin-1 data
-        logger.info("[1/5] Loading regions for %s …", self.country_iso3)
-        self._regions_wgs84 = load_country_regions(
-            self.country_iso3,
-            dissolve_by=self.dissolve_by,
-        )
+        # 1. Load regions — from user GeoDataFrame or Natural Earth
+        if self._custom_gdf is not None:
+            logger.info("[1/5] Preparing custom GeoDataFrame …")
+            self._regions_wgs84 = _prepare_custom_gdf(
+                self._custom_gdf, self._custom_region_col
+            )
+        else:
+            logger.info("[1/5] Loading regions for %s …", self.country_iso3)
+            self._regions_wgs84 = load_country_regions(
+                self.country_iso3,
+                dissolve_by=self.dissolve_by,
+            )
 
         # 2. Project to country-centred LAEA (equal-area, metres)
         logger.info("[2/5] Projecting to equal-area CRS …")
@@ -268,9 +351,18 @@ class AreaGrid:
                 f"scope must be 'all', 'islands', or 'mainland'; got {scope!r}"
             )
 
+        # Resolve title: plot() arg > instance attr > auto-generated
         if title is None:
-            title = _country_title(self.country_iso3)
+            title = self.title
+        if title is None:
+            if self._custom_gdf is not None:
+                title = "A Tiled Map"
+            else:
+                title = _country_title(self.country_iso3)
 
+        # Resolve subtitle: plot() arg > instance attr > auto-generated
+        if subtitle is None:
+            subtitle = self.subtitle
         if subtitle is None:
             pct = round(100 / self.n, 2) if self.n > 0 else 0
             subtitle = (
@@ -291,7 +383,7 @@ class AreaGrid:
             scope=scope,
             background_style=background_style,
             show_region_borders=show_region_borders,
-            data_source=data_source,
+            data_source=data_source if data_source is not None else self.data_source,
         )
 
     def save(
@@ -323,6 +415,82 @@ class AreaGrid:
         plt.close(fig)
         logger.info("Saved → %s", path)
 
+    # ── Alternative constructor ──────────────────────────────────────────────
+
+    @classmethod
+    def from_geodataframe(
+        cls,
+        gdf: gpd.GeoDataFrame,
+        region_col: str,
+        n: int = 1000,
+        cluster_distance_km: float = 200.0,
+        palette: str | list[str] = "qual",
+        title: Optional[str] = None,
+        subtitle: Optional[str] = None,
+        data_source: Optional[str] = None,
+    ) -> "AreaGrid":
+        """
+        Build an AreaGrid from any GeoDataFrame — no Natural Earth download.
+
+        This is the entry point for custom shapefiles, GeoJSON files,
+        PostGIS queries, or any other polygon data source.
+
+        Parameters
+        ----------
+        gdf:
+            GeoDataFrame with polygon geometries and at least one name column.
+            Any CRS is accepted — it will be re-projected to LAEA internally.
+        region_col:
+            Column to use as the region label, e.g. ``'NAME_1'``,
+            ``'district'``, ``'state_name'``.
+        n:
+            Target number of cells.  Default 1000.
+        cluster_distance_km:
+            Max distance (km) to group landmasses together.  Default 200.
+        palette:
+            Named palette or list of hex colours.
+        title:
+            Figure title.  If ``None``, defaults to ``"A Tiled Map"``.
+            Pass a custom string to override, e.g. ``"My Region Map"``.
+
+        Returns
+        -------
+        AreaGrid (not yet built — call ``.build()`` or ``.plot()`` to run)
+
+        Examples
+        --------
+        ::
+
+            import geopandas as gpd
+            from popgrid import AreaGrid
+
+            gdf = gpd.read_file("my_regions.geojson")
+            ag = AreaGrid.from_geodataframe(gdf, region_col="NAME_1")
+            fig = ag.plot(title="My Custom Map")
+        """
+        instance = cls.__new__(cls)
+        # Minimal __init__ — bypass Natural Earth loading
+        instance.country_iso3 = "CUSTOM"
+        instance.n = n
+        instance.cluster_distance_km = cluster_distance_km
+        instance.palette = palette
+        instance.dissolve_by = None
+        instance._custom_gdf = gdf
+        instance._custom_region_col = region_col
+        instance.title = title
+        instance.subtitle = subtitle
+        instance.data_source = data_source
+        instance._title_override = None  # kept for backwards compat, unused
+
+        # Internal state
+        instance._regions_wgs84 = None
+        instance._regions_proj = None
+        instance._landmasses = None
+        instance._cell_size = None
+        instance._color_map = None
+        instance._built = False
+        return instance
+
     # ── Dunder ────────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
@@ -332,10 +500,11 @@ class AreaGrid:
             if self._built
             else "not built"
         )
-        return (
-            f"AreaGrid(country='{self.country_iso3}', n={self.n}, "
-            f"dissolve_by={self.dissolve_by!r})  [{status}]"
-        )
+        if self._custom_gdf is not None:
+            source = f"custom GeoDataFrame ({len(self._custom_gdf)} rows)"
+        else:
+            source = f"country='{self.country_iso3}', dissolve_by={self.dissolve_by!r}"
+        return f"AreaGrid({source}, n={self.n})  [{status}]"
 
 class PopGrid(AreaGrid):
     """

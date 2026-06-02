@@ -164,3 +164,101 @@ def test_custom_palette_list():
     pg.build()
     fig = pg.plot(show_labels=False)
     plt.close(fig)
+
+
+# ── from_geodataframe ─────────────────────────────────────────────────────────
+
+def _make_test_gdf():
+    """Minimal 3-region GeoDataFrame in WGS84."""
+    import geopandas as gpd
+    import shapely
+    geoms = [
+        shapely.box(0, 0, 2, 2),
+        shapely.box(2, 0, 4, 2),
+        shapely.box(0, 2, 4, 4),
+    ]
+    return gpd.GeoDataFrame(
+        {"NAME": ["Alpha", "Beta", "Gamma"], "geometry": geoms},
+        crs="EPSG:4326",
+    )
+
+
+def test_from_geodataframe_returns_area_grid():
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME")
+    assert isinstance(ag, AreaGrid)
+    assert not ag._built
+
+
+def test_from_geodataframe_custom_gdf_stored():
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME")
+    assert ag._custom_gdf is not None
+    assert ag._custom_region_col == "NAME"
+
+
+def test_from_geodataframe_builds():
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME", n=50)
+    ag.build()
+    assert ag._built
+    assert ag.total_cells > 0
+
+
+def test_from_geodataframe_plot_returns_figure():
+    import matplotlib.pyplot as plt
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME", n=50)
+    fig = ag.plot(title="Test Map")
+    assert fig is not None
+    plt.close(fig)
+
+
+def test_from_geodataframe_custom_title():
+    import matplotlib.pyplot as plt
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME", n=50,
+                                    title="My Custom Map")
+    fig = ag.plot()
+    plt.close(fig)
+    assert ag.title == "My Custom Map"
+
+
+def test_from_geodataframe_wrong_col_raises():
+    gdf = _make_test_gdf()
+    with pytest.raises(ValueError, match="not found"):
+        AreaGrid.from_geodataframe(gdf, region_col="NONEXISTENT").build()
+
+
+def test_from_geodataframe_wrong_type_raises():
+    import pandas as pd
+    df = pd.DataFrame({"NAME": ["A"], "x": [1]})
+    with pytest.raises(TypeError, match="GeoDataFrame"):
+        AreaGrid.from_geodataframe(df, region_col="NAME").build()
+
+
+def test_from_geodataframe_repr():
+    gdf = _make_test_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="NAME")
+    assert "custom GeoDataFrame" in repr(ag)
+
+
+def test_from_geodataframe_any_crs():
+    """CRS other than WGS84 should work — reprojected to WGS84 then LAEA."""
+    import geopandas as gpd
+    import shapely
+    # Two boxes in WGS84 reprojected to EPSG:3857 (Web Mercator)
+    from pyproj import Transformer
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    def to_3857(lon0, lat0, lon1, lat1):
+        x0, y0 = transformer.transform(lon0, lat0)
+        x1, y1 = transformer.transform(lon1, lat1)
+        return shapely.box(x0, y0, x1, y1)
+    geoms = [to_3857(0, 0, 2, 2), to_3857(2, 0, 4, 2)]
+    gdf = gpd.GeoDataFrame(
+        {"region": ["A", "B"], "geometry": geoms},
+        crs="EPSG:3857",
+    )
+    ag = AreaGrid.from_geodataframe(gdf, region_col="region", n=20)
+    ag.build()
+    assert ag.total_cells > 0
