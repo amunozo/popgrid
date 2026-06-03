@@ -1,198 +1,149 @@
 # popgrid
 
-**Tiled grid maps for Python: population and land area.**
+**Tiled grid maps for Python, land area and population, clearly explained.**
 
-`popgrid` turns any country into a square-grid map where every cell represents an equal share of the country's **population** (or its land area). Regions are sized by their share, automatically colored so neighbours and the largest regions stay distinct, labeled, and geographically detached territories are shown as panel insets.
+[![PyPI](https://img.shields.io/pypi/v/popgrid.svg)](https://pypi.org/project/popgrid/)
+[![Python](https://img.shields.io/pypi/pyversions/popgrid.svg)](https://pypi.org/project/popgrid/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Inspired by [@Civixplorer](https://twitter.com/Civixplorer).
+popgrid turns a country (or any set of regions) into a block cartogram where **every block is an equal share of the whole**: 0.1% of the national land area, or 0.1% of the population. Same regions, same colours, two ways of seeing them. Where land and people diverge is the whole point.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_compare.png" width="100%" alt="Land area vs population of Spain, side by side">
+</p>
+
+Madrid is a sliver of land and a giant of population. The empty interior shrinks; the coasts and the capital swell. A block on the left is the same size as a block on the right, so the comparison is literally true.
 
 ---
 
-## Installation
+## Install
 
 ```bash
-pip install -e .
+pip install popgrid
 ```
 
-Natural Earth boundary data (~14 MB) downloads automatically on first use and caches at `~/.popgrid/cache/`. Population data for 24 countries ships with the package.
+Requires Python 3.10+. Country boundaries are downloaded once from Natural Earth and cached locally; population data for the bundled countries ships with the package.
 
 ---
 
-## Quick start
-
-Population map (each block = 0.1% of the national population):
+## Quickstart
 
 ```python
-from popgrid import PopGrid
+from popgrid import PopGrid, AreaGrid
 
-pg = PopGrid("ESP", n=1000, dissolve_by="auto")
-pg.build()
-pg.save("spain.png", dpi=200)
+# Population: every block = 0.1% of the national population
+PopGrid("ESP").plot().savefig("spain_population.png", dpi=170, bbox_inches="tight")
+
+# Land area: every block = 0.1% of the national land area
+AreaGrid("ESP").plot().savefig("spain_area.png", dpi=170, bbox_inches="tight")
 ```
 
-Land-area map (each block = an equal share of land area):
+| Population | Land area |
+|---|---|
+| ![Population of Spain](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_pop.png) | ![Land area of Spain](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_area.png) |
 
-```python
-from popgrid import AreaGrid
-
-ag = AreaGrid("DEU", dissolve_by="auto")
-ag.build()
-ag.save("germany.png", dpi=200)
-```
-
-Batch-generate population maps from the command line:
-
-```bash
-python generate.py                 # default set: ESP DEU ITA FRA GBR
-python generate.py ESP DEU JPN     # specific countries
-python generate.py ALL             # every country with bundled population data
-python generate.py ITA --n 1500    # more blocks = finer detail
-python generate.py ESP --out maps  # custom output folder
-```
-
-PNGs land in `./out/` (or `--out`). `dissolve_by="auto"` picks the right administrative level per country.
+`.plot()` builds the grid on first call and returns a Matplotlib figure, so you can save, show, or restyle it however you like.
 
 ---
 
-## Classes
+## Your own data
 
-### `PopGrid` — population-weighted tiled map
+Both classes accept any GeoDataFrame through `from_geodataframe`, so popgrid is not limited to the bundled countries. Point it at a shapefile, a GeoJSON, or a PostGIS query.
 
-Each cell represents an equal share of the country's **population**, allocated proportionally via the Hamilton (largest-remainder) quota method.
+- `AreaGrid.from_geodataframe(gdf, region_col=...)` sizes each region by its land area.
+- `PopGrid.from_geodataframe(gdf, region_col=..., weight_col=...)` sizes each region by a numeric column you supply, such as population.
 
 ```python
-from popgrid import PopGrid
+import geopandas as gpd
+from popgrid import AreaGrid, PopGrid
 
-pg = PopGrid(
-    iso3="ESP",            # ISO 3166-1 alpha-3 country code
-    n=1000,                # target number of cells (default: 1000)
-    dissolve_by="auto",    # group admin-1 rows into parent regions
-    palette="qual",        # "qual", "databites", "bold", or a list of hex
+gdf = gpd.read_file("examples/data/barcelona_districts.geojson")
+
+# Sized by district land area
+AreaGrid.from_geodataframe(gdf, region_col="district").plot(
+    title="Land Area of Barcelona",
+    subtitle="Every block = 0.1% of city land area",
 )
-pg.build()
-fig = pg.plot(title="Population of Spain, Visualised")
-pg.save("spain.png", dpi=200)
+
+# Sized by your own population column
+PopGrid.from_geodataframe(gdf, region_col="district", weight_col="population").plot(
+    title="Population of Barcelona",
+    subtitle="Every block = 0.1% of city population",
+)
 ```
 
-### `AreaGrid` — land-area tiled map
+Barcelona's 10 districts, built entirely from a custom GeoDataFrame. Eixample, the densest district, balloons under population; Les Corts and the green hills of Sarrià shrink.
 
-Each cell represents an equal share of the country's **land area**. Same API, same options.
-
-```python
-from popgrid import AreaGrid
-
-ag = AreaGrid("DEU", dissolve_by="auto")
-ag.build()
-ag.save("germany.png", dpi=200)
-```
-
----
-
-## Parameters
-
-### Constructor `(iso3, n, dissolve_by, palette, cluster_distance_km)`
-
-| Parameter | Default | Description |
-|---|---|---|
-| `iso3` | required | ISO 3166-1 alpha-3 code (`"ESP"`, `"USA"`, `"DEU"`, …) |
-| `n` | `1000` | Target number of cells |
-| `dissolve_by` | `"auto"` | Column to dissolve admin-1 rows into parent regions. `"auto"` uses `RECOMMENDED_SETTINGS`. |
-| `palette` | `"qual"` | Named palette or list of hex colours |
-| `cluster_distance_km` | `200` | Max distance (km) to treat landmasses as one group. `"auto"` applies per-country overrides. |
-
-### `.plot(...)` / `.save(path, dpi)`
-
-| Parameter | Default | Description |
-|---|---|---|
-| `background_style` | `"grid"` | `"grid"` light grey lines · `"solid"` filled rectangle · `"none"` plain |
-| `show_region_borders` | `True` | Draw a black outline around each region |
-| `scope` | `"all"` | `"all"` · `"islands"` · `"mainland"` |
-| `title` | auto | Override the auto-generated title |
-| `subtitle` | auto | Override the auto-generated subtitle |
-| `data_source` | auto | Attribution shown bottom-left |
-
----
-
-## CLI
-
-Batch population maps (root script):
-
-```bash
-python generate.py [ISO3 ...|ALL] [--n N] [--out DIR] [--dpi N]
-```
-
-Single land-area map with full styling options:
-
-```bash
-python examples/country.py ESP
-python examples/country.py USA --background grid --dpi 300
-python examples/country.py FRA --scope mainland --save france.png
-```
-
-Inspect Natural Earth data for any country:
-
-```bash
-python examples/inspect_country.py ESP
-```
-
----
-
-## Supported countries
-
-Population data and tested `dissolve_by="auto"` settings ship for 24 countries:
-
-ARG, AUS, BEL, BRA, CAN, CHE, CHN, DEU, ESP, FRA, GBR, ITA, JPN, KOR, MEX, NLD, NOR, PHL, POL, PRT, SWE, TUR, USA, ZAF.
-
-Segmentation is chosen per country for legibility, for example:
-
-| Country | Regions shown |
+| Land area | Population |
 |---|---|
-| Spain (ESP) | 19 Autonomous Communities |
-| Germany (DEU) | 16 States |
-| France (FRA) | 18 Regions (+ overseas in panels) |
-| Italy (ITA) | 20 Regions |
-| USA | 51 States (+ Alaska, Hawaii in panels) |
-| Japan (JPN) | 9 traditional regions (Kanto, Kinki, …) |
-| United Kingdom (GBR) | 16 sub-regions |
+| ![Land area of Barcelona](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/barcelona_area.png) | ![Population of Barcelona](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/barcelona_population.png) |
 
-Any country in Natural Earth admin-1 works for land-area maps; `dissolve_by="auto"` falls back gracefully for unconfigured countries.
+A full runnable version is in [`examples/barcelona.py`](examples/barcelona.py), using the district boundaries in [`examples/data/barcelona_districts.geojson`](examples/data/barcelona_districts.geojson).
 
 ---
 
-## Known limitations
+## Command line
 
-- **China-class geography.** Countries with an extreme population-density gradient and long, thin provinces (China is the clearest case) tear the contiguous cartogram during deformation, leaving a central void and disconnected-looking pieces. `popgrid` builds them without error, but they are not as clean as compact, evenly-populated countries. A diffusion-based cartogram (Gastner-Newman) would be needed to handle them well.
-- **Population currency.** Bundled population figures are a fixed snapshot (see `popgrid/resources/population.csv`), not live data.
-
----
-
-## Data source
-
-**Natural Earth** `ne_10m_admin_1_states_provinces` (public domain), auto-downloaded on first use and cached at `~/.popgrid/cache/`. Population figures are bundled in `popgrid/resources/population.csv`.
-
----
-
-## Roadmap
-
-| Version | Feature |
-|---|---|
-| **v0.3.0** ✅ | `PopGrid` population maps, `AreaGrid` land-area maps, 24 countries, size-aware colors, per-country segmentation, batch CLI |
-| v1.0.0 🔜 | PyPI publish (`pip install popgrid`), docs site, CI |
-| later 🔜 | Custom shapefiles via `from_geodataframe()`; diffusion cartogram for China-class countries |
-
----
-
-## Development
+`generate.py` (at the repo root) renders one or many countries from the terminal.
 
 ```bash
-git clone https://github.com/databites-tech/popgrid.git
-cd popgrid
-pip install -e ".[dev]"
-python -m pytest tests/ -q
+# Population map of Spain
+python generate.py ESP --mode pop
+
+# Land-area map
+python generate.py ESP --mode area
+
+# Side-by-side comparison (land area vs population, equal block size)
+python generate.py ESP --mode compare
+
+# Several countries at once, into a folder
+python generate.py ESP DEU FRA --mode compare --out compare/
+
+# Everything bundled
+python generate.py ALL --mode pop
 ```
+
+Useful flags: `--n` (target block count, default 1000), `--mainland` (drop detached territories), `--no-panels` (keep nearby islands inline, drop distant panels), `--palette`, `--dissolve`, `--no-labels`, `--bg`, `--background grid|solid|none`, `--title`, `--subtitle`, `--source`, `--dpi`, `--out`. Run `python generate.py --help` for the full list.
 
 ---
 
-## License
+## Bundled countries
 
-MIT © Josep Ferrer — [databites.tech](https://databites.tech)
+24 countries ship with population data and recommended regional segmentation:
+
+`ARG` `AUS` `BEL` `BRA` `CAN` `CHE` `CHN` `DEU` `ESP` `FRA` `GBR` `ITA` `JPN` `KOR` `MEX` `NLD` `NOR` `PHL` `POL` `PRT` `SWE` `TUR` `USA` `ZAF`
+
+For any other country, or for sub-national data such as cities, use `from_geodataframe` with your own polygons.
+
+---
+
+## How it works
+
+1. Load admin-1 regions, project to an equal-area CRS, and choose a cell size so the country tiles into roughly `n` blocks (default 1000, so one block ≈ 0.1%).
+2. Allocate an integer block quota per region using the Hamilton (largest-remainder) method, weighted by area or population.
+3. For population maps, deform each landmass with a contiguous-area cartogram so a region's area tracks its population, then rasterise the deformed shapes onto the grid. Dense regions bulge, sparse regions pinch, relative position and silhouette are preserved.
+4. Fit each region to its exact quota and assign stable colours from the geographic adjacency graph, so the same region keeps the same colour across the area and population maps.
+
+---
+
+## Notes and limitations
+
+- **China** leaves a small interior void in the population map. The extreme density gradient between the eastern seaboard and the western interior is hard to tile without a gap; it is documented rather than hidden.
+- **Population currency.** Bundled population figures are a fixed snapshot, not live data. For up-to-date or custom numbers, pass your own values through `PopGrid.from_geodataframe(..., weight_col=...)`.
+- Block counts land close to `n` but not always exactly, because of quota rounding and edge fitting (e.g. 984 or 1018 rather than 1000).
+
+---
+
+## Data sources
+
+- Country and admin-1 boundaries: [Natural Earth](https://www.naturalearthdata.com/) (`ne_10m_admin_1_states_provinces`), public domain.
+- Bundled population figures: World Bank and national statistical offices.
+- Barcelona example: district boundaries from [Ajuntament de Barcelona](https://opendata-ajuntament.barcelona.cat/) open data; population from the 2023 municipal register.
+
+---
+
+## License & credits
+
+MIT licensed. Built by [Josep Ferrer](https://github.com/rfeers) at **[databites.tech](https://databites.tech)**, data and AI, clearly explained through diagrams.
+
+The block-cartogram format is inspired by the "Population of X, Visualised" maps popularised by [@Civixplorer](https://twitter.com/Civixplorer).
