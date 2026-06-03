@@ -59,6 +59,7 @@ def _country_title(iso3: str, region_label: Optional[str] = None) -> str:
 def _prepare_custom_gdf(
     gdf: gpd.GeoDataFrame,
     region_col: str,
+    weight_col: Optional[str] = None,
 ) -> gpd.GeoDataFrame:
     """
     Validate and normalise a user-supplied GeoDataFrame into the standard
@@ -72,11 +73,15 @@ def _prepare_custom_gdf(
     region_col:
         Name of the column to use as the region label (e.g. ``'NAME_1'``,
         ``'district'``, ``'state'``).
+    weight_col:
+        Optional numeric column to carry through as ``region_weight`` (used by
+        ``PopGrid`` to size regions by, e.g., population). Ignored by AreaGrid.
 
     Returns
     -------
     GeoDataFrame with columns ``region_id``, ``region_name``, ``geometry``
-    in the original CRS (re-projection happens later in the pipeline).
+    (and ``region_weight`` if *weight_col* given) in the original CRS
+    (re-projection happens later in the pipeline).
     """
     import shapely as _shapely
 
@@ -90,11 +95,18 @@ def _prepare_custom_gdf(
             f"Column {region_col!r} not found in GeoDataFrame. "
             f"Available columns: {available}"
         )
+    if weight_col is not None and weight_col not in gdf.columns:
+        available = [c for c in gdf.columns if c != "geometry"]
+        raise ValueError(
+            f"weight_col {weight_col!r} not found in GeoDataFrame. "
+            f"Available columns: {available}"
+        )
     if "geometry" not in gdf.columns or gdf.geometry.is_empty.all():
         raise ValueError("GeoDataFrame has no usable geometry column.")
 
     # Drop rows with null geometry or null region name
-    out = gdf[[region_col, "geometry"]].copy()
+    cols = [region_col, "geometry"] + ([weight_col] if weight_col else [])
+    out = gdf[cols].copy()
     out = out[out["geometry"].notna() & out[region_col].notna()].copy()
     out = out[~out["geometry"].is_empty].copy()
 
@@ -108,10 +120,17 @@ def _prepare_custom_gdf(
     out["geometry"] = _shapely.make_valid(out["geometry"].values)
 
     # Rename to standard schema
-    out = out.rename(columns={region_col: "region_name"})
+    rename = {region_col: "region_name"}
+    if weight_col:
+        rename[weight_col] = "region_weight"
+    out = out.rename(columns=rename)
     out["region_name"] = out["region_name"].astype(str).str.strip()
     out["region_id"] = range(len(out))
-    out = out[["region_id", "region_name", "geometry"]].reset_index(drop=True)
+    keep = ["region_id", "region_name", "geometry"]
+    if weight_col:
+        out["region_weight"] = pd.to_numeric(out["region_weight"], errors="coerce")
+        keep.append("region_weight")
+    out = out[keep].reset_index(drop=True)
 
     # project_regions expects WGS84 geographic coordinates for its median
     # centroid calculation — reproject if necessary.
@@ -328,6 +347,7 @@ class AreaGrid:
         # Custom GeoDataFrame path (from_geodataframe)
         self._custom_gdf: Optional[gpd.GeoDataFrame] = None
         self._custom_region_col: Optional[str] = None
+        self._custom_weight_col: Optional[str] = None
 
         # Internal state – populated by build()
         self._regions_wgs84: Optional[gpd.GeoDataFrame] = None
@@ -377,7 +397,8 @@ class AreaGrid:
         if self._custom_gdf is not None:
             logger.info("[1/5] Preparing custom GeoDataFrame …")
             self._regions_wgs84 = _prepare_custom_gdf(
-                self._custom_gdf, self._custom_region_col
+                self._custom_gdf, self._custom_region_col,
+                weight_col=self._custom_weight_col,
             )
         else:
             logger.info("[1/5] Loading regions for %s …", self.country_iso3)
@@ -617,6 +638,7 @@ class AreaGrid:
         cls,
         gdf: gpd.GeoDataFrame,
         region_col: str,
+        weight_col: Optional[str] = None,
         n: int = 1000,
         cluster_distance_km: float = 200.0,
         palette: str | list[str] = "qual",
@@ -625,10 +647,17 @@ class AreaGrid:
         data_source: Optional[str] = None,
     ) -> "AreaGrid":
         """
-        Build an AreaGrid from any GeoDataFrame — no Natural Earth download.
+        Build an AreaGrid or PopGrid from any GeoDataFrame — no Natural Earth
+        download.
 
         This is the entry point for custom shapefiles, GeoJSON files,
-        PostGIS queries, or any other polygon data source.
+        PostGIS queries, or any other polygon data source. It works on both
+        classes:
+
+        * ``AreaGrid.from_geodataframe(gdf, region_col=...)`` sizes each region
+          by its land area.
+        * ``PopGrid.from_geodataframe(gdf, region_col=..., weight_col=...)``
+          sizes each region by the numeric ``weight_col`` (e.g. population).
 
         Parameters
         ----------
@@ -638,6 +667,10 @@ class AreaGrid:
         region_col:
             Column to use as the region label, e.g. ``'NAME_1'``,
             ``'district'``, ``'state_name'``.
+        weight_col:
+            Numeric column to weight regions by (PopGrid only — required when
+            calling ``PopGrid.from_geodataframe``). Ignored by AreaGrid, which
+            always weights by land area.
         n:
             Target number of cells.  Default 1000.
         cluster_distance_km:
@@ -650,18 +683,25 @@ class AreaGrid:
 
         Returns
         -------
-        AreaGrid (not yet built — call ``.build()`` or ``.plot()`` to run)
+        AreaGrid or PopGrid (not yet built — call ``.build()`` or ``.plot()``)
 
         Examples
         --------
         ::
 
             import geopandas as gpd
-            from popgrid import AreaGrid
+            from popgrid import AreaGrid, PopGrid
 
-            gdf = gpd.read_file("my_regions.geojson")
-            ag = AreaGrid.from_geodataframe(gdf, region_col="NAME_1")
-            fig = ag.plot(title="My Custom Map")
+            gdf = gpd.read_file("barcelona_districts.geojson")
+
+            # Land-area cartogram
+            ag = AreaGrid.from_geodataframe(gdf, region_col="district")
+
+            # Population cartogram from your own column
+            pg = PopGrid.from_geodataframe(
+                gdf, region_col="district", weight_col="population"
+            )
+            fig = pg.plot(title="Population of Barcelona")
         """
         instance = cls.__new__(cls)
         # Minimal __init__ — bypass Natural Earth loading
@@ -672,6 +712,7 @@ class AreaGrid:
         instance.dissolve_by = None
         instance._custom_gdf = gdf
         instance._custom_region_col = region_col
+        instance._custom_weight_col = weight_col
         instance.title = title
         instance.subtitle = subtitle
         instance.data_source = data_source
@@ -831,7 +872,8 @@ class PopGrid(AreaGrid):
         if self._custom_gdf is not None:
             logger.info("[1/6] Preparing custom GeoDataFrame …")
             self._regions_wgs84 = _prepare_custom_gdf(
-                self._custom_gdf, self._custom_region_col
+                self._custom_gdf, self._custom_region_col,
+                weight_col=self._custom_weight_col,
             )
         else:
             logger.info("[1/6] Loading regions for %s …", self.country_iso3)
@@ -871,21 +913,42 @@ class PopGrid(AreaGrid):
             logger.warning("Geometry simplification skipped: %s", exc)
 
         # ── 3. Population weights → integer quotas ─────────────────────────
-        logger.info("[3/6] Loading population weights …")
         region_names: list[str] = self._regions_proj["region_name"].dropna().tolist()
-        # When geometries were dissolved to a coarser level, aggregate the
-        # fine-grained populations up to those parent regions.
-        resolved = self.dissolve_by
-        if resolved == "auto":
-            resolved = RECOMMENDED_SETTINGS.get(
-                self.country_iso3, {}
-            ).get("dissolve_by", None)
-        name_to_parent = (
-            admin1_parent_map(self.country_iso3, resolved) if resolved else None
-        )
-        pop_weights = load_region_populations(
-            self.country_iso3, region_names, name_to_parent=name_to_parent
-        )
+        if self._custom_gdf is not None:
+            # Custom GeoDataFrame: weights come from the user's weight_col,
+            # carried through as the 'region_weight' column.
+            if "region_weight" not in self._regions_proj.columns:
+                raise ValueError(
+                    "PopGrid.from_geodataframe requires weight_col=... (a numeric "
+                    "column such as population). For an area-weighted map use "
+                    "AreaGrid.from_geodataframe instead."
+                )
+            logger.info("[3/6] Reading custom weights …")
+            pop_weights = {
+                str(row["region_name"]): float(row["region_weight"])
+                for _, row in self._regions_proj.iterrows()
+                if row["region_name"] is not None and pd.notna(row["region_weight"])
+            }
+            if not pop_weights or sum(pop_weights.values()) <= 0:
+                raise ValueError(
+                    f"weight_col contained no usable positive values "
+                    f"(got {pop_weights!r})."
+                )
+        else:
+            logger.info("[3/6] Loading population weights …")
+            # When geometries were dissolved to a coarser level, aggregate the
+            # fine-grained populations up to those parent regions.
+            resolved = self.dissolve_by
+            if resolved == "auto":
+                resolved = RECOMMENDED_SETTINGS.get(
+                    self.country_iso3, {}
+                ).get("dissolve_by", None)
+            name_to_parent = (
+                admin1_parent_map(self.country_iso3, resolved) if resolved else None
+            )
+            pop_weights = load_region_populations(
+                self.country_iso3, region_names, name_to_parent=name_to_parent
+            )
         total_pop = sum(pop_weights.values()) or len(region_names)
         raw_quotas = {
             name: self.n * pop_weights.get(name, 0) / total_pop

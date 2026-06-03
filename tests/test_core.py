@@ -277,8 +277,10 @@ def test_popgrid_cells_near_n():
     from popgrid import PopGrid
     pg = PopGrid("DEU", n=200)
     pg.build()
-    # total cells may be slightly under n (dense regions capped by land area)
-    assert pg.total_cells <= 200
+    # Total lands close to n: dense regions can be capped by land area
+    # (slightly under) while count-neutral gap-filling of enclosed interior
+    # pockets can nudge a few cells over.  Allow a 10% band either side.
+    assert abs(pg.total_cells - 200) <= 20
 
 def test_popgrid_population_subtitle():
     from popgrid import PopGrid
@@ -299,3 +301,63 @@ def test_popgrid_custom_subtitle_respected():
     pg = PopGrid("DEU", n=200, subtitle="Custom subtitle")
     pg.build()
     assert pg.subtitle == "Custom subtitle"
+
+
+# ── PopGrid.from_geodataframe (custom weight column) ────────────────────────────
+
+def _toy_gdf():
+    """Three side-by-side square 'regions' with populations, in EPSG:4326."""
+    import geopandas as gpd
+    from shapely.geometry import box
+    return gpd.GeoDataFrame(
+        {
+            "district": ["A", "B", "C"],
+            "pop": [600000, 300000, 100000],
+        },
+        geometry=[box(0, 0, 1, 1), box(1, 0, 2, 1), box(2, 0, 3, 1)],
+        crs="EPSG:4326",
+    )
+
+
+def _region_counts(grid):
+    import pandas as pd
+    cells = pd.concat(
+        [lm["cells"] for lm in grid._landmasses if len(lm["cells"])]
+    )
+    return cells.groupby("region_name").size()
+
+
+def test_popgrid_from_geodataframe_weights_by_column():
+    """PopGrid.from_geodataframe sizes regions by weight_col, not area."""
+    from popgrid import PopGrid
+
+    gdf = _toy_gdf()  # equal areas, unequal population
+    pg = PopGrid.from_geodataframe(
+        gdf, region_col="district", weight_col="pop", n=1000
+    ).build()
+    counts = _region_counts(pg)
+    # Equal-area squares, so any size difference must come from population.
+    assert counts["A"] > counts["B"] > counts["C"]
+    # Roughly tracks the 6:3:1 population split (loose bounds for rasterisation).
+    assert counts["A"] > 1.5 * counts["B"]
+
+
+def test_popgrid_from_geodataframe_requires_weight_col():
+    """Calling PopGrid.from_geodataframe without weight_col is a clear error."""
+    import pytest
+    from popgrid import PopGrid
+
+    pg = PopGrid.from_geodataframe(_toy_gdf(), region_col="district")
+    with pytest.raises(ValueError, match="weight_col"):
+        pg.build()
+
+
+def test_areagrid_from_geodataframe_ignores_weight():
+    """AreaGrid.from_geodataframe weights by area regardless of weight_col."""
+    from popgrid import AreaGrid
+
+    gdf = _toy_gdf()
+    ag = AreaGrid.from_geodataframe(gdf, region_col="district", n=1000).build()
+    counts = _region_counts(ag)
+    # Equal-area squares → roughly equal block counts.
+    assert abs(int(counts["A"]) - int(counts["C"])) <= 0.25 * int(counts["A"])
