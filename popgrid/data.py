@@ -95,7 +95,7 @@ RECOMMENDED_SETTINGS: dict[str, dict] = {
     "ARG": {"dissolve_by": None},   # 24 provinces
     "AUS": {"dissolve_by": None},   # 8  states/territories
     "CAN": {"dissolve_by": None},   # 13 provinces/territories
-    "JPN": {"dissolve_by": None},   # 47 prefectures
+    "JPN": {"dissolve_by": "region", "cluster_distance_km": 100},  # 9 regions; 100km peels Okinawa into its own panel
     "CHN": {"dissolve_by": None},   # 32 provinces
     "NLD": {"dissolve_by": None},   # 12 provinces
     "POL": {"dissolve_by": None},   # 16 voivodeships
@@ -112,7 +112,10 @@ RECOMMENDED_SETTINGS: dict[str, dict] = {
     # GBR: Natural Earth stores 232 UK districts. 'region' gives 16 English
     # sub-regions (not the 4 nations). No clean single-level option exists in
     # this dataset. Use dissolve_by=None (232 districts) and accept the detail.
-    "GBR": {"dissolve_by": None},
+    # GBR: Natural Earth stores 232 UK districts — far too granular. The
+    # 'region' field groups them into 16 sub-regions (English regions + Welsh,
+    # Scottish, NI groupings). Coarser and far more legible than 232 districts.
+    "GBR": {"dissolve_by": "region"},
 }
 
 
@@ -204,6 +207,35 @@ def _download_admin1() -> Path:
 
 
 # ── Core loader ───────────────────────────────────────────────────────────────
+
+
+def admin1_parent_map(country_iso3: str, parent_col: str = "region") -> dict[str, str]:
+    """
+    Return ``{admin1_name: parent_region}`` for a country, read straight from
+    Natural Earth.  Used to aggregate fine-grained populations up to the coarse
+    regions produced by ``load_country_regions(dissolve_by=parent_col)``.
+    Names with an empty parent map to themselves.
+    """
+    shp_path = _download_admin1()
+    all_regions = gpd.read_file(shp_path)
+    iso = country_iso3.strip().upper()
+    regions = gpd.GeoDataFrame()
+    for col in ("adm0_a3", "iso_a3"):
+        if col in all_regions.columns:
+            m = all_regions[col].str.strip().str.upper() == iso
+            regions = all_regions[m]
+            if not regions.empty:
+                break
+    out: dict[str, str] = {}
+    if regions.empty or "name" not in regions.columns or parent_col not in regions.columns:
+        return out
+    for _, r in regions.iterrows():
+        name = str(r["name"]).strip() if r["name"] is not None else ""
+        parent = r[parent_col]
+        parent = str(parent).strip() if parent is not None else ""
+        if name:
+            out[name] = parent if parent else name
+    return out
 
 
 def load_country_regions(
@@ -323,3 +355,78 @@ def load_country_regions(
 
     logger.info("Loaded %d admin-1 regions for %s", len(regions), iso)
     return regions
+
+
+def load_region_populations(
+    iso3: str,
+    region_names: list[str],
+    name_to_parent: Optional[dict[str, str]] = None,
+) -> dict[str, int]:
+    """
+    Return ``{region_name: population}`` for the given country.
+
+    Reads from the bundled ``resources/population.csv``.  For regions
+    not found in the CSV, falls back to the mean of known values so the
+    total stays roughly proportional.
+
+    Parameters
+    ----------
+    iso3:
+        ISO 3166-1 alpha-3 country code.
+    region_names:
+        Exact region name strings as they appear in Natural Earth
+        (after any dissolve).  Used as lookup keys.
+
+    Returns
+    -------
+    dict mapping region_name → integer population estimate.
+    """
+    import csv as _csv
+
+    csv_path = Path(__file__).parent / "resources" / "population.csv"
+
+    country_pops: dict[str, int] = {}
+    if csv_path.exists():
+        with open(csv_path, newline="", encoding="utf-8") as fh:
+            reader = _csv.DictReader(fh)
+            for row in reader:
+                if row["iso3"].strip().upper() == iso3.upper():
+                    name = row["region_name"].strip()
+                    try:
+                        pop = int(float(row["population"]))
+                    except (ValueError, KeyError):
+                        pop = 0
+                    country_pops[name] = pop
+    else:
+        logger.warning("population.csv not found at %s", csv_path)
+
+    result: dict[str, int] = {}
+    missing: list[str] = []
+
+    # If a fine→parent name map is supplied (because geometries were dissolved
+    # to a coarser level), aggregate the fine-grained populations up to the
+    # parent regions before looking up the requested coarse names.
+    if name_to_parent:
+        agg: dict[str, int] = {}
+        for fine_name, pop in country_pops.items():
+            parent = name_to_parent.get(fine_name, fine_name)
+            agg[parent] = agg.get(parent, 0) + pop
+        country_pops = agg
+
+    for name in region_names:
+        if name in country_pops and country_pops[name] > 0:
+            result[name] = country_pops[name]
+        else:
+            missing.append(name)
+
+    # Fallback: mean of known values so missing regions are not invisible
+    if missing:
+        fallback = max(1, sum(result.values()) // len(result)) if result else 1
+        for name in missing:
+            result[name] = fallback
+            logger.warning(
+                "No population data for %r (%s) — using fallback weight %d",
+                name, iso3, fallback,
+            )
+
+    return result

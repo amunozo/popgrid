@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "popgrid"
-version = "0.1.0"
+version = "0.3.0"
 description = "Tiled grid maps for Python — land area and population cartograms"
 readme = "README.md"
 license = {text = "MIT"}
@@ -51,3 +51,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.setuptools.package-data]
+popgrid = ["resources/*.csv"]

@@ -262,3 +262,40 @@ def test_from_geodataframe_any_crs():
     ag = AreaGrid.from_geodataframe(gdf, region_col="region", n=20)
     ag.build()
     assert ag.total_cells > 0
+
+
+# ── PopGrid ───────────────────────────────────────────────────────────────────
+
+def test_popgrid_builds():
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=200)
+    pg.build()
+    assert pg._built
+    assert pg.total_cells > 0
+
+def test_popgrid_cells_near_n():
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=200)
+    pg.build()
+    # total cells may be slightly under n (dense regions capped by land area)
+    assert pg.total_cells <= 200
+
+def test_popgrid_population_subtitle():
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=200)
+    pg.build()
+    assert "population" in pg.subtitle
+
+def test_popgrid_plot_returns_figure():
+    import matplotlib.pyplot as plt
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=200)
+    fig = pg.plot()
+    assert fig is not None
+    plt.close(fig)
+
+def test_popgrid_custom_subtitle_respected():
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=200, subtitle="Custom subtitle")
+    pg.build()
+    assert pg.subtitle == "Custom subtitle"

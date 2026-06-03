@@ -1,0 +1,797 @@
+iso3,region_name,population,year,source
+ESP,Andalucía,8472407,2021,INE (Spanish National Statistics Institute) Census 2021
+ESP,Aragón,1326261,2021,INE Census 2021
+ESP,Asturias,1011792,2021,INE Census 2021
+ESP,Canary Is.,2172944,2021,INE Census 2021
+ESP,Cantabria,582206,2021,INE Census 2021
+ESP,Castilla y León,2394918,2021,INE Census 2021
+ESP,Castilla-La Mancha,2045221,2021,INE Census 2021
+ESP,Cataluña,7763362,2021,INE Census 2021
+ESP,Ceuta,84777,2021,INE Census 2021
+ESP,Extremadura,1059501,2021,INE Census 2021
+ESP,Foral de Navarra,661197,2021,INE Census 2021
+ESP,Galicia,2695645,2021,INE Census 2021
+ESP,Islas Baleares,1171543,2021,INE Census 2021
+ESP,La Rioja,319914,2021,INE Census 2021
+ESP,Madrid,6779888,2021,INE Census 2021
+ESP,Melilla,86384,2021,INE Census 2021
+ESP,Murcia,1511251,2021,INE Census 2021
+ESP,País Vasco,2213993,2021,INE Census 2021
+ESP,Valenciana,5058138,2021,INE Census 2021
+FRA,Auvergne-Rhône-Alpes,8068261,2021,INSEE RP 2021
+FRA,Bourgogne-Franche-Comté,2812040,2021,INSEE RP 2021
+FRA,Bretagne,3382915,2021,INSEE RP 2021
+FRA,Centre-Val de Loire,2566920,2021,INSEE RP 2021
+FRA,Corse,345507,2021,INSEE RP 2021
+FRA,Grand Est,5568711,2021,INSEE RP 2021
+FRA,Guadeloupe,376879,2021,INSEE RP 2021
+FRA,Guyane française,290691,2021,INSEE RP 2021
+FRA,Hauts-de-France,5998916,2021,INSEE RP 2021
+FRA,Île-de-France,12271794,2021,INSEE RP 2021
+FRA,Martinique,349925,2021,INSEE RP 2021
+FRA,Mayotte,321202,2021,INSEE RP 2021
+FRA,Normandie,3316001,2021,INSEE RP 2021
+FRA,Nouvelle-Aquitaine,6082478,2021,INSEE RP 2021
+FRA,Occitanie,5997498,2021,INSEE RP 2021
+FRA,Pays de la Loire,3844180,2021,INSEE RP 2021
+FRA,Provence-Alpes-Côte-d'Azur,5104429,2021,INSEE RP 2021
+FRA,Réunion,863083,2021,INSEE RP 2021
+ITA,Abruzzo,1305770,2021,ISTAT Census 2021
+ITA,Apulia,3952561,2021,ISTAT Census 2021
+ITA,Basilicata,545131,2021,ISTAT Census 2021
+ITA,Calabria,1894110,2021,ISTAT Census 2021
+ITA,Campania,5712143,2021,ISTAT Census 2021
+ITA,Emilia-Romagna,4459477,2021,ISTAT Census 2021
+ITA,Friuli-Venezia Giulia,1206216,2021,ISTAT Census 2021
+ITA,Lazio,5755700,2021,ISTAT Census 2021
+ITA,Liguria,1524826,2021,ISTAT Census 2021
+ITA,Lombardia,10060574,2021,ISTAT Census 2021
+ITA,Marche,1512672,2021,ISTAT Census 2021
+ITA,Molise,300516,2021,ISTAT Census 2021
+ITA,Piemonte,4254929,2021,ISTAT Census 2021
+ITA,Sardegna,1611621,2021,ISTAT Census 2021
+ITA,Sicily,4875290,2021,ISTAT Census 2021
+ITA,Toscana,3692555,2021,ISTAT Census 2021
+ITA,Trentino-Alto Adige,1078069,2021,ISTAT Census 2021
+ITA,Umbria,869403,2021,ISTAT Census 2021
+ITA,Valle d'Aosta,125034,2021,ISTAT Census 2021
+ITA,Veneto,4879133,2021,ISTAT Census 2021
+PHL,Autonomous Region in Muslim Mindanao (ARMM),4404228,2020,PSA Census 2020
+PHL,Bicol (Region V),6082165,2020,PSA Census 2020
+PHL,CALABARZON (Region IV-A),16195042,2020,PSA Census 2020
+PHL,Cagayan Valley (Region II),3685744,2020,PSA Census 2020
+PHL,Central Luzon (Region III),12422172,2020,PSA Census 2020
+PHL,Central Visayas (Region VII),8081988,2020,PSA Census 2020
+PHL,Cordillera Administrative Region (CAR),1797660,2020,PSA Census 2020
+PHL,Davao (Region XI),5243536,2020,PSA Census 2020
+PHL,Dinagat Islands (Region XIII),127904,2020,PSA Census 2020
+PHL,Eastern Visayas (Region VIII),4547150,2020,PSA Census 2020
+PHL,Ilocos (Region I),5301139,2020,PSA Census 2020
+PHL,MIMAROPA (Region IV-B),3228558,2020,PSA Census 2020
+PHL,National Capital Region,13484462,2020,PSA Census 2020
+PHL,Northern Mindanao (Region X),5022768,2020,PSA Census 2020
+PHL,SOCCSKSARGEN (Region XII),4901486,2020,PSA Census 2020
+PHL,Western Visayas (Region VI),7954723,2020,PSA Census 2020
+PHL,Zamboanga Peninsula (Region IX),3875576,2020,PSA Census 2020
+DEU,Baden-Württemberg,11103043,2021,Destatis Zensus 2022
+DEU,Bayern,13176989,2021,Destatis Zensus 2022
+DEU,Berlin,3677472,2021,Destatis Zensus 2022
+DEU,Brandenburg,2537868,2021,Destatis Zensus 2022
+DEU,Bremen,685905,2021,Destatis Zensus 2022
+DEU,Hamburg,1852478,2021,Destatis Zensus 2022
+DEU,Hessen,6295017,2021,Destatis Zensus 2022
+DEU,Mecklenburg-Vorpommern,1609675,2021,Destatis Zensus 2022
+DEU,Niedersachsen,8003421,2021,Destatis Zensus 2022
+DEU,Nordrhein-Westfalen,17924591,2021,Destatis Zensus 2022
+DEU,Rheinland-Pfalz,4106485,2021,Destatis Zensus 2022
+DEU,Saarland,986887,2021,Destatis Zensus 2022
+DEU,Sachsen,4056941,2021,Destatis Zensus 2022
+DEU,Sachsen-Anhalt,2180684,2021,Destatis Zensus 2022
+DEU,Schleswig-Holstein,2910875,2021,Destatis Zensus 2022
+DEU,Thüringen,2122335,2021,Destatis Zensus 2022
+USA,Alabama,5024279,2020,US Census Bureau 2020
+USA,Alaska,733391,2020,US Census Bureau 2020
+USA,Arizona,7151502,2020,US Census Bureau 2020
+USA,Arkansas,3011524,2020,US Census Bureau 2020
+USA,California,39538223,2020,US Census Bureau 2020
+USA,Colorado,5773714,2020,US Census Bureau 2020
+USA,Connecticut,3605944,2020,US Census Bureau 2020
+USA,Delaware,989948,2020,US Census Bureau 2020
+USA,District of Columbia,689545,2020,US Census Bureau 2020
+USA,Florida,21538187,2020,US Census Bureau 2020
+USA,Georgia,10711908,2020,US Census Bureau 2020
+USA,Hawaii,1455271,2020,US Census Bureau 2020
+USA,Idaho,1839106,2020,US Census Bureau 2020
+USA,Illinois,12812508,2020,US Census Bureau 2020
+USA,Indiana,6785528,2020,US Census Bureau 2020
+USA,Iowa,3190369,2020,US Census Bureau 2020
+USA,Kansas,2937880,2020,US Census Bureau 2020
+USA,Kentucky,4505836,2020,US Census Bureau 2020
+USA,Louisiana,4657757,2020,US Census Bureau 2020
+USA,Maine,1362359,2020,US Census Bureau 2020
+USA,Maryland,6177224,2020,US Census Bureau 2020
+USA,Massachusetts,7029917,2020,US Census Bureau 2020
+USA,Michigan,10077331,2020,US Census Bureau 2020
+USA,Minnesota,5706494,2020,US Census Bureau 2020
+USA,Mississippi,2961279,2020,US Census Bureau 2020
+USA,Missouri,6154913,2020,US Census Bureau 2020
+USA,Montana,1084225,2020,US Census Bureau 2020
+USA,Nebraska,1961504,2020,US Census Bureau 2020
+USA,Nevada,3104614,2020,US Census Bureau 2020
+USA,New Hampshire,1377529,2020,US Census Bureau 2020
+USA,New Jersey,9288994,2020,US Census Bureau 2020
+USA,New Mexico,2117522,2020,US Census Bureau 2020
+USA,New York,20201249,2020,US Census Bureau 2020
+USA,North Carolina,10439388,2020,US Census Bureau 2020
+USA,North Dakota,779094,2020,US Census Bureau 2020
+USA,Ohio,11799448,2020,US Census Bureau 2020
+USA,Oklahoma,3959353,2020,US Census Bureau 2020
+USA,Oregon,4237256,2020,US Census Bureau 2020
+USA,Pennsylvania,13002700,2020,US Census Bureau 2020
+USA,Rhode Island,1097379,2020,US Census Bureau 2020
+USA,South Carolina,5118425,2020,US Census Bureau 2020
+USA,South Dakota,886667,2020,US Census Bureau 2020
+USA,Tennessee,6910840,2020,US Census Bureau 2020
+USA,Texas,29145505,2020,US Census Bureau 2020
+USA,Utah,3271616,2020,US Census Bureau 2020
+USA,Vermont,643077,2020,US Census Bureau 2020
+USA,Virginia,8631393,2020,US Census Bureau 2020
+USA,Washington,7705281,2020,US Census Bureau 2020
+USA,West Virginia,1793716,2020,US Census Bureau 2020
+USA,Wisconsin,5893718,2020,US Census Bureau 2020
+USA,Wyoming,576851,2020,US Census Bureau 2020
+BRA,Acre,906876,2022,IBGE Census 2022
+BRA,Alagoas,3127683,2022,IBGE Census 2022
+BRA,Amapá,877613,2022,IBGE Census 2022
+BRA,Amazonas,4269995,2022,IBGE Census 2022
+BRA,Bahia,14136417,2022,IBGE Census 2022
+BRA,Ceará,9132078,2022,IBGE Census 2022
+BRA,Distrito Federal,2817068,2022,IBGE Census 2022
+BRA,Espírito Santo,4064052,2022,IBGE Census 2022
+BRA,Goiás,7206589,2022,IBGE Census 2022
+BRA,Maranhão,6775152,2022,IBGE Census 2022
+BRA,Mato Grosso,3784239,2022,IBGE Census 2022
+BRA,Mato Grosso do Sul,2756700,2022,IBGE Census 2022
+BRA,Minas Gerais,20732660,2022,IBGE Census 2022
+BRA,Pará,8690745,2022,IBGE Census 2022
+BRA,Paraíba,3974687,2022,IBGE Census 2022
+BRA,Paraná,11516840,2022,IBGE Census 2022
+BRA,Pernambuco,9058931,2022,IBGE Census 2022
+BRA,Piauí,3269173,2022,IBGE Census 2022
+BRA,Rio de Janeiro,16054524,2022,IBGE Census 2022
+BRA,Rio Grande do Norte,3302406,2022,IBGE Census 2022
+BRA,Rio Grande do Sul,10880749,2022,IBGE Census 2022
+BRA,Rondônia,1815278,2022,IBGE Census 2022
+BRA,Roraima,636707,2022,IBGE Census 2022
+BRA,Santa Catarina,7609601,2022,IBGE Census 2022
+BRA,Sergipe,2298696,2022,IBGE Census 2022
+BRA,São Paulo,44411238,2022,IBGE Census 2022
+BRA,Tocantins,1590248,2022,IBGE Census 2022
+MEX,Aguascalientes,1425607,2020,INEGI Census 2020
+MEX,Baja California,3769020,2020,INEGI Census 2020
+MEX,Baja California Sur,798447,2020,INEGI Census 2020
+MEX,Campeche,928363,2020,INEGI Census 2020
+MEX,Chiapas,5543828,2020,INEGI Census 2020
+MEX,Chihuahua,3741869,2020,INEGI Census 2020
+MEX,Coahuila,3146771,2020,INEGI Census 2020
+MEX,Colima,731391,2020,INEGI Census 2020
+MEX,Distrito Federal,9209944,2020,INEGI Census 2020
+MEX,Durango,1832650,2020,INEGI Census 2020
+MEX,Guanajuato,6166934,2020,INEGI Census 2020
+MEX,Guerrero,3540685,2020,INEGI Census 2020
+MEX,Hidalgo,3082841,2020,INEGI Census 2020
+MEX,Jalisco,8348151,2020,INEGI Census 2020
+MEX,México,16992418,2020,INEGI Census 2020
+MEX,Michoacán,4748846,2020,INEGI Census 2020
+MEX,Morelos,1971520,2020,INEGI Census 2020
+MEX,Nayarit,1235456,2020,INEGI Census 2020
+MEX,Nuevo León,5784442,2020,INEGI Census 2020
+MEX,Oaxaca,4132148,2020,INEGI Census 2020
+MEX,Puebla,6583278,2020,INEGI Census 2020
+MEX,Querétaro,2368467,2020,INEGI Census 2020
+MEX,Quintana Roo,1857985,2020,INEGI Census 2020
+MEX,San Luis Potosí,2822255,2020,INEGI Census 2020
+MEX,Sinaloa,3026943,2020,INEGI Census 2020
+MEX,Sonora,2944840,2020,INEGI Census 2020
+MEX,Tabasco,2402598,2020,INEGI Census 2020
+MEX,Tamaulipas,3527735,2020,INEGI Census 2020
+MEX,Tlaxcala,1342977,2020,INEGI Census 2020
+MEX,Veracruz,8062579,2020,INEGI Census 2020
+MEX,Yucatán,2320898,2020,INEGI Census 2020
+MEX,Zacatecas,1622138,2020,INEGI Census 2020
+ARG,Buenos Aires,17541141,2022,INDEC Census 2022
+ARG,Catamarca,415438,2022,INDEC Census 2022
+ARG,Chaco,1204541,2022,INDEC Census 2022
+ARG,Chubut,618994,2022,INDEC Census 2022
+ARG,Ciudad de Buenos Aires,3120612,2022,INDEC Census 2022
+ARG,Corrientes,1120801,2022,INDEC Census 2022
+ARG,Córdoba,3978984,2022,INDEC Census 2022
+ARG,Entre Ríos,1316063,2022,INDEC Census 2022
+ARG,Formosa,605193,2022,INDEC Census 2022
+ARG,Jujuy,770881,2022,INDEC Census 2022
+ARG,La Pampa,358428,2022,INDEC Census 2022
+ARG,La Rioja,384607,2022,INDEC Census 2022
+ARG,Mendoza,2014533,2022,INDEC Census 2022
+ARG,Misiones,1261294,2022,INDEC Census 2022
+ARG,Neuquén,664057,2022,INDEC Census 2022
+ARG,Río Negro,747610,2022,INDEC Census 2022
+ARG,Salta,1441996,2022,INDEC Census 2022
+ARG,San Juan,781217,2022,INDEC Census 2022
+ARG,San Luis,531748,2022,INDEC Census 2022
+ARG,Santa Cruz,333473,2022,INDEC Census 2022
+ARG,Santa Fe,3536418,2022,INDEC Census 2022
+ARG,Santiago del Estero,1015514,2022,INDEC Census 2022
+ARG,Tierra del Fuego,190641,2022,INDEC Census 2022
+ARG,Tucumán,1714487,2022,INDEC Census 2022
+AUS,Australian Capital Territory,431215,2021,ABS Census 2021
+AUS,Jervis Bay Territory,391,2021,ABS Census 2021
+AUS,Lord Howe Island,382,2021,ABS Census 2021
+AUS,Macquarie Island,0,2021,ABS Census 2021
+AUS,New South Wales,8072163,2021,ABS Census 2021
+AUS,Northern Territory,250148,2021,ABS Census 2021
+AUS,Queensland,5185024,2021,ABS Census 2021
+AUS,South Australia,1820541,2021,ABS Census 2021
+AUS,Tasmania,557571,2021,ABS Census 2021
+AUS,Victoria,6503491,2021,ABS Census 2021
+AUS,Western Australia,2660088,2021,ABS Census 2021
+CAN,Alberta,4262635,2021,Statistics Canada Census 2021
+CAN,British Columbia,5000879,2021,Statistics Canada Census 2021
+CAN,Manitoba,1342153,2021,Statistics Canada Census 2021
+CAN,New Brunswick,775610,2021,Statistics Canada Census 2021
+CAN,Newfoundland and Labrador,510550,2021,Statistics Canada Census 2021
+CAN,Northwest Territories,41786,2021,Statistics Canada Census 2021
+CAN,Nova Scotia,969383,2021,Statistics Canada Census 2021
+CAN,Nunavut,36858,2021,Statistics Canada Census 2021
+CAN,Ontario,14223942,2021,Statistics Canada Census 2021
+CAN,Prince Edward Island,154331,2021,Statistics Canada Census 2021
+CAN,Québec,8501833,2021,Statistics Canada Census 2021
+CAN,Saskatchewan,1132505,2021,Statistics Canada Census 2021
+CAN,Yukon,40232,2021,Statistics Canada Census 2021
+JPN,Aichi,7542415,2020,Statistics Bureau of Japan Census 2020
+JPN,Akita,959502,2020,Statistics Bureau of Japan Census 2020
+JPN,Aomori,1237984,2020,Statistics Bureau of Japan Census 2020
+JPN,Chiba,6279026,2020,Statistics Bureau of Japan Census 2020
+JPN,Ehime,1334841,2020,Statistics Bureau of Japan Census 2020
+JPN,Fukui,766863,2020,Statistics Bureau of Japan Census 2020
+JPN,Fukuoka,5138217,2020,Statistics Bureau of Japan Census 2020
+JPN,Fukushima,1833152,2020,Statistics Bureau of Japan Census 2020
+JPN,Gifu,1978742,2020,Statistics Bureau of Japan Census 2020
+JPN,Gunma,1939110,2020,Statistics Bureau of Japan Census 2020
+JPN,Hiroshima,2799702,2020,Statistics Bureau of Japan Census 2020
+JPN,Hokkaidō,5228737,2020,Statistics Bureau of Japan Census 2020
+JPN,Hyōgo,5465002,2020,Statistics Bureau of Japan Census 2020
+JPN,Ibaraki,2867009,2020,Statistics Bureau of Japan Census 2020
+JPN,Ishikawa,1132526,2020,Statistics Bureau of Japan Census 2020
+JPN,Iwate,1210534,2020,Statistics Bureau of Japan Census 2020
+JPN,Kagawa,950244,2020,Statistics Bureau of Japan Census 2020
+JPN,Kagoshima,1588256,2020,Statistics Bureau of Japan Census 2020
+JPN,Kanagawa,9240411,2020,Statistics Bureau of Japan Census 2020
+JPN,Kumamoto,1738301,2020,Statistics Bureau of Japan Census 2020
+JPN,Kyōto,2578087,2020,Statistics Bureau of Japan Census 2020
+JPN,Kōchi,691527,2020,Statistics Bureau of Japan Census 2020
+JPN,Mie,1770254,2020,Statistics Bureau of Japan Census 2020
+JPN,Miyagi,2301996,2020,Statistics Bureau of Japan Census 2020
+JPN,Miyazaki,1069576,2020,Statistics Bureau of Japan Census 2020
+JPN,Nagano,2048011,2020,Statistics Bureau of Japan Census 2020
+JPN,Nagasaki,1312317,2020,Statistics Bureau of Japan Census 2020
+JPN,Nara,1324473,2020,Statistics Bureau of Japan Census 2020
+JPN,Niigata,2201272,2020,Statistics Bureau of Japan Census 2020
+JPN,Okayama,1888432,2020,Statistics Bureau of Japan Census 2020
+JPN,Okinawa,1467480,2020,Statistics Bureau of Japan Census 2020
+JPN,Saga,811442,2020,Statistics Bureau of Japan Census 2020
+JPN,Saitama,7344765,2020,Statistics Bureau of Japan Census 2020
+JPN,Shiga,1413610,2020,Statistics Bureau of Japan Census 2020
+JPN,Shimane,671126,2020,Statistics Bureau of Japan Census 2020
+JPN,Shizuoka,3633202,2020,Statistics Bureau of Japan Census 2020
+JPN,Tochigi,1933146,2020,Statistics Bureau of Japan Census 2020
+JPN,Tokushima,719559,2020,Statistics Bureau of Japan Census 2020
+JPN,Tokyo,13960000,2020,Statistics Bureau of Japan Census 2020
+JPN,Tottori,553407,2020,Statistics Bureau of Japan Census 2020
+JPN,Toyama,1034814,2020,Statistics Bureau of Japan Census 2020
+JPN,Wakayama,922584,2020,Statistics Bureau of Japan Census 2020
+JPN,Yamagata,1068027,2020,Statistics Bureau of Japan Census 2020
+JPN,Yamaguchi,1342059,2020,Statistics Bureau of Japan Census 2020
+JPN,Yamanashi,809974,2020,Statistics Bureau of Japan Census 2020
+JPN,Ōita,1123852,2020,Statistics Bureau of Japan Census 2020
+JPN,Ōsaka,8837685,2020,Statistics Bureau of Japan Census 2020
+CHN,Anhui,61027171,2020,National Bureau of Statistics of China Census 2020
+CHN,Beijing,21893095,2020,National Bureau of Statistics of China Census 2020
+CHN,Chongqing,32041552,2020,National Bureau of Statistics of China Census 2020
+CHN,Fujian,41540086,2020,National Bureau of Statistics of China Census 2020
+CHN,Gansu,24501332,2020,National Bureau of Statistics of China Census 2020
+CHN,Guangdong,126012510,2020,National Bureau of Statistics of China Census 2020
+CHN,Guangxi,50126804,2020,National Bureau of Statistics of China Census 2020
+CHN,Guizhou,38562148,2020,National Bureau of Statistics of China Census 2020
+CHN,Hainan,10081232,2020,National Bureau of Statistics of China Census 2020
+CHN,Hebei,74610235,2020,National Bureau of Statistics of China Census 2020
+CHN,Heilongjiang,31850088,2020,National Bureau of Statistics of China Census 2020
+CHN,Henan,99365519,2020,National Bureau of Statistics of China Census 2020
+CHN,Hubei,57752557,2020,National Bureau of Statistics of China Census 2020
+CHN,Hunan,66444864,2020,National Bureau of Statistics of China Census 2020
+CHN,Inner Mongol,24049155,2020,National Bureau of Statistics of China Census 2020
+CHN,Jiangsu,84748016,2020,National Bureau of Statistics of China Census 2020
+CHN,Jiangxi,45188635,2020,National Bureau of Statistics of China Census 2020
+CHN,Jilin,24073453,2020,National Bureau of Statistics of China Census 2020
+CHN,Liaoning,42591407,2020,National Bureau of Statistics of China Census 2020
+CHN,Ningxia,7202654,2020,National Bureau of Statistics of China Census 2020
+CHN,Paracel Islands,1000,2020,Estimate (uninhabited military installation)
+CHN,Qinghai,5923957,2020,National Bureau of Statistics of China Census 2020
+CHN,Shaanxi,39528999,2020,National Bureau of Statistics of China Census 2020
+CHN,Shandong,101527453,2020,National Bureau of Statistics of China Census 2020
+CHN,Shanghai,24870895,2020,National Bureau of Statistics of China Census 2020
+CHN,Shanxi,34915616,2020,National Bureau of Statistics of China Census 2020
+CHN,Sichuan,83674866,2020,National Bureau of Statistics of China Census 2020
+CHN,Tianjin,13866009,2020,National Bureau of Statistics of China Census 2020
+CHN,Xinjiang,25852345,2020,National Bureau of Statistics of China Census 2020
+CHN,Xizang,3648100,2020,National Bureau of Statistics of China Census 2020
+CHN,Yunnan,47209277,2020,National Bureau of Statistics of China Census 2020
+CHN,Zhejiang,64567588,2020,National Bureau of Statistics of China Census 2020
+NLD,Bonaire,22579,2021,CBS Netherlands 2021
+NLD,Drenthe,496331,2021,CBS Netherlands 2021
+NLD,Flevoland,425157,2021,CBS Netherlands 2021
+NLD,Friesland,653378,2021,CBS Netherlands 2021
+NLD,Gelderland,2084478,2021,CBS Netherlands 2021
+NLD,Groningen,588678,2021,CBS Netherlands 2021
+NLD,Limburg,1115760,2021,CBS Netherlands 2021
+NLD,Noord-Brabant,2567736,2021,CBS Netherlands 2021
+NLD,Noord-Holland,2883903,2021,CBS Netherlands 2021
+NLD,Overijssel,1162688,2021,CBS Netherlands 2021
+NLD,Saba,1915,2021,CBS Netherlands 2021
+NLD,St. Eustatius,3193,2021,CBS Netherlands 2021
+NLD,Utrecht,1353470,2021,CBS Netherlands 2021
+NLD,Zeeland,383488,2021,CBS Netherlands 2021
+NLD,Zuid-Holland,3743185,2021,CBS Netherlands 2021
+POL,Greater Poland,3493969,2021,GUS (Statistics Poland) 2021
+POL,Kuyavian-Pomeranian,2057420,2021,GUS 2021
+POL,Lesser Poland,3425149,2021,GUS 2021
+POL,Lower Silesian,2900163,2021,GUS 2021
+POL,Lublin,2093048,2021,GUS 2021
+POL,Lubusz,1012075,2021,GUS 2021
+POL,Masovian,5423168,2021,GUS 2021
+POL,Opole,974344,2021,GUS 2021
+POL,Podlachian,1178353,2021,GUS 2021
+POL,Pomeranian,2343928,2021,GUS 2021
+POL,Silesian,4399107,2021,GUS 2021
+POL,Subcarpathian,2127164,2021,GUS 2021
+POL,Warmian-Masurian,1423116,2021,GUS 2021
+POL,West Pomeranian,1696860,2021,GUS 2021
+POL,Łódź,2419897,2021,GUS 2021
+POL,Świętokrzyskie,1219815,2021,GUS 2021
+SWE,Blekinge,162411,2022,Statistics Sweden (SCB) 2022
+SWE,Dalarna,287191,2022,SCB 2022
+SWE,Gotland,60512,2022,SCB 2022
+SWE,Gävleborg,287382,2022,SCB 2022
+SWE,Halland,344032,2022,SCB 2022
+SWE,Jämtland,130810,2022,SCB 2022
+SWE,Jönköping,368794,2022,SCB 2022
+SWE,Kalmar,246900,2022,SCB 2022
+SWE,Kronoberg,201098,2022,SCB 2022
+SWE,Norrbotten,249693,2022,SCB 2022
+SWE,Orebro,305191,2022,SCB 2022
+SWE,Skåne,1377827,2022,SCB 2022
+SWE,Stockholm,2415139,2022,SCB 2022
+SWE,Södermanland,300942,2022,SCB 2022
+SWE,Uppsala,390694,2022,SCB 2022
+SWE,Värmland,281933,2022,SCB 2022
+SWE,Västerbotten,275989,2022,SCB 2022
+SWE,Västernorrland,241393,2022,SCB 2022
+SWE,Västmanland,277776,2022,SCB 2022
+SWE,Västra Götaland,1757180,2022,SCB 2022
+SWE,Östergötland,469067,2022,SCB 2022
+NOR,Akershus,641457,2022,Statistics Norway (SSB) 2022
+NOR,Aust-Agder,116301,2022,SSB 2022
+NOR,Bouvet Island,0,2022,Uninhabited Norwegian territory
+NOR,Buskerud,301428,2022,SSB 2022
+NOR,Finnmark,75133,2022,SSB 2022
+NOR,Hedmark,197594,2022,SSB 2022
+NOR,Hordaland,521586,2022,SSB 2022
+NOR,Møre og Romsdal,265238,2022,SSB 2022
+NOR,Nord-Trøndelag,139220,2022,SSB 2022
+NOR,Nordland,240345,2022,SSB 2022
+NOR,Oppland,190749,2022,SSB 2022
+NOR,Oslo,697549,2022,SSB 2022
+NOR,Rogaland,479892,2022,SSB 2022
+NOR,Sogn og Fjordane,108944,2022,SSB 2022
+NOR,Svalbard,2667,2022,SSB 2022
+NOR,Sør-Trøndelag,326014,2022,SSB 2022
+NOR,Telemark,175546,2022,SSB 2022
+NOR,Troms,165632,2022,SSB 2022
+NOR,Vest-Agder,184155,2022,SSB 2022
+NOR,Vestfold,247398,2022,SSB 2022
+NOR,Østfold,302230,2022,SSB 2022
+TUR,Adana,2237940,2022,TUIK Address Based Population Registration System 2022
+TUR,Adiyaman,614476,2022,TUIK 2022
+TUR,Afyonkarahisar,730634,2022,TUIK 2022
+TUR,Agri,495967,2022,TUIK 2022
+TUR,Aksaray,425514,2022,TUIK 2022
+TUR,Amasya,335769,2022,TUIK 2022
+TUR,Ankara,5782285,2022,TUIK 2022
+TUR,Antalya,2619832,2022,TUIK 2022
+TUR,Ardahan,92726,2022,TUIK 2022
+TUR,Artvin,168170,2022,TUIK 2022
+TUR,Aydin,1138279,2022,TUIK 2022
+TUR,Balikesir,1250626,2022,TUIK 2022
+TUR,Bartın,198038,2022,TUIK 2022
+TUR,Batman,612609,2022,TUIK 2022
+TUR,Bayburt,83281,2022,TUIK 2022
+TUR,Bilecik,229419,2022,TUIK 2022
+TUR,Bingöl,277440,2022,TUIK 2022
+TUR,Bitlis,333985,2022,TUIK 2022
+TUR,Bolu,321289,2022,TUIK 2022
+TUR,Burdur,268938,2022,TUIK 2022
+TUR,Bursa,3101833,2022,TUIK 2022
+TUR,Denizli,1036629,2022,TUIK 2022
+TUR,Diyarbakir,1741267,2022,TUIK 2022
+TUR,Düzce,395108,2022,TUIK 2022
+TUR,Edirne,413271,2022,TUIK 2022
+TUR,Elazig,579091,2022,TUIK 2022
+TUR,Erzincan,228467,2022,TUIK 2022
+TUR,Erzurum,718074,2022,TUIK 2022
+TUR,Eskisehir,905653,2022,TUIK 2022
+TUR,Gaziantep,2154051,2022,TUIK 2022
+TUR,Giresun,432253,2022,TUIK 2022
+TUR,Gümüshane,138580,2022,TUIK 2022
+TUR,Hakkari,289270,2022,TUIK 2022
+TUR,Hatay,1638709,2022,TUIK 2022
+TUR,Isparta,434296,2022,TUIK 2022
+TUR,Istanbul,15907951,2022,TUIK 2022
+TUR,Izmir,4462056,2022,TUIK 2022
+TUR,Iğdir,196463,2022,TUIK 2022
+TUR,K. Maras,1143164,2022,TUIK 2022
+TUR,Karabük,235279,2022,TUIK 2022
+TUR,Karaman,255657,2022,TUIK 2022
+TUR,Kars,272218,2022,TUIK 2022
+TUR,Kastamonu,362539,2022,TUIK 2022
+TUR,Kayseri,1424325,2022,TUIK 2022
+TUR,Kilis,135120,2022,TUIK 2022
+TUR,Kinkkale,289726,2022,TUIK 2022
+TUR,Kirklareli,365719,2022,TUIK 2022
+TUR,Kirsehir,231944,2022,TUIK 2022
+TUR,Kocaeli,2026239,2022,TUIK 2022
+TUR,Konya,2291186,2022,TUIK 2022
+TUR,Kütahya,568165,2022,TUIK 2022
+TUR,Malatya,780141,2022,TUIK 2022
+TUR,Manisa,1452627,2022,TUIK 2022
+TUR,Mardin,862528,2022,TUIK 2022
+TUR,Mersin,1919951,2022,TUIK 2022
+TUR,Mugla,1033553,2022,TUIK 2022
+TUR,Mus,414552,2022,TUIK 2022
+TUR,Nevsehir,303622,2022,TUIK 2022
+TUR,Nigde,383009,2022,TUIK 2022
+TUR,Ordu,730054,2022,TUIK 2022
+TUR,Osmaniye,540321,2022,TUIK 2022
+TUR,Rize,336706,2022,TUIK 2022
+TUR,Sakarya,1082547,2022,TUIK 2022
+TUR,Samsun,1335716,2022,TUIK 2022
+TUR,Sanliurfa,2130432,2022,TUIK 2022
+TUR,Siirt,325022,2022,TUIK 2022
+TUR,Sinop,207532,2022,TUIK 2022
+TUR,Sirnak,567984,2022,TUIK 2022
+TUR,Sivas,596562,2022,TUIK 2022
+TUR,Tekirdag,1073697,2022,TUIK 2022
+TUR,Tokat,597083,2022,TUIK 2022
+TUR,Trabzon,808878,2022,TUIK 2022
+TUR,Tunceli,82428,2022,TUIK 2022
+TUR,Usak,380497,2022,TUIK 2022
+TUR,Van,1136461,2022,TUIK 2022
+TUR,Yalova,271535,2022,TUIK 2022
+TUR,Yozgat,381370,2022,TUIK 2022
+TUR,Zinguldak,577647,2022,TUIK 2022
+TUR,Çanakkale,584238,2022,TUIK 2022
+TUR,Çankiri,183043,2022,TUIK 2022
+TUR,Çorum,497464,2022,TUIK 2022
+ZAF,Eastern Cape,6734001,2022,Statistics South Africa Census 2022
+ZAF,Free State,2745590,2022,Statistics South Africa Census 2022
+ZAF,Gauteng,15810388,2022,Statistics South Africa Census 2022
+ZAF,KwaZulu-Natal,11513322,2022,Statistics South Africa Census 2022
+ZAF,Limpopo,5982584,2022,Statistics South Africa Census 2022
+ZAF,Mpumalanga,4592187,2022,Statistics South Africa Census 2022
+ZAF,North West,3748436,2022,Statistics South Africa Census 2022
+ZAF,Northern Cape,1262966,2022,Statistics South Africa Census 2022
+ZAF,Western Cape,7208389,2022,Statistics South Africa Census 2022
+KOR,Busan,3390000,2022,Statistics Korea 2022
+KOR,Daegu,2385000,2022,Statistics Korea 2022
+KOR,Daejeon,1463000,2022,Statistics Korea 2022
+KOR,Gangwon,1541000,2022,Statistics Korea 2022
+KOR,Gwangju,1442000,2022,Statistics Korea 2022
+KOR,Gyeonggi,13606000,2022,Statistics Korea 2022
+KOR,Incheon,2958000,2022,Statistics Korea 2022
+KOR,Jeju,677000,2022,Statistics Korea 2022
+KOR,North Chungcheong,1601000,2022,Statistics Korea 2022
+KOR,North Gyeongsang,2625000,2022,Statistics Korea 2022
+KOR,North Jeolla,1807000,2022,Statistics Korea 2022
+KOR,Sejong,388000,2022,Statistics Korea 2022
+KOR,Seoul,9732000,2022,Statistics Korea 2022
+KOR,South Chungcheong,2121000,2022,Statistics Korea 2022
+KOR,South Gyeongsang,3301000,2022,Statistics Korea 2022
+KOR,South Jeolla,1830000,2022,Statistics Korea 2022
+KOR,Ulsan,1121000,2022,Statistics Korea 2022
+PRT,Aveiro,714254,2021,INE Portugal Census 2021
+PRT,Azores,236015,2021,INE Portugal Census 2021
+PRT,Beja,147722,2021,INE Portugal Census 2021
+PRT,Braga,848185,2021,INE Portugal Census 2021
+PRT,Bragança,113617,2021,INE Portugal Census 2021
+PRT,Castelo Branco,183481,2021,INE Portugal Census 2021
+PRT,Coimbra,434217,2021,INE Portugal Census 2021
+PRT,Faro,441929,2021,INE Portugal Census 2021
+PRT,Guarda,153896,2021,INE Portugal Census 2021
+PRT,Leiria,470071,2021,INE Portugal Census 2021
+PRT,Lisboa,2247426,2021,INE Portugal Census 2021
+PRT,Madeira,254254,2021,INE Portugal Census 2021
+PRT,Portalegre,104661,2021,INE Portugal Census 2021
+PRT,Porto,1737395,2021,INE Portugal Census 2021
+PRT,Santarém,436623,2021,INE Portugal Census 2021
+PRT,Setúbal,914069,2021,INE Portugal Census 2021
+PRT,Viana do Castelo,244836,2021,INE Portugal Census 2021
+PRT,Vila Real,193417,2021,INE Portugal Census 2021
+PRT,Viseu,370976,2021,INE Portugal Census 2021
+PRT,Évora,167266,2021,INE Portugal Census 2021
+CHE,Aargau,706000,2022,Swiss Federal Statistical Office 2022
+CHE,Appenzell Ausserrhoden,56243,2022,Swiss FSO 2022
+CHE,Appenzell Innerrhoden,16293,2022,Swiss FSO 2022
+CHE,Basel-Landschaft,295203,2022,Swiss FSO 2022
+CHE,Basel-Stadt,180403,2022,Swiss FSO 2022
+CHE,Bern,1043132,2022,Swiss FSO 2022
+CHE,Fribourg,330905,2022,Swiss FSO 2022
+CHE,Genève,509448,2022,Swiss FSO 2022
+CHE,Glarus,41143,2022,Swiss FSO 2022
+CHE,Graubünden,202538,2022,Swiss FSO 2022
+CHE,Jura,73584,2022,Swiss FSO 2022
+CHE,Lucerne,419791,2022,Swiss FSO 2022
+CHE,Neuchâtel,175894,2022,Swiss FSO 2022
+CHE,Nidwalden,43520,2022,Swiss FSO 2022
+CHE,Obwalden,38108,2022,Swiss FSO 2022
+CHE,Sankt Gallen,520174,2022,Swiss FSO 2022
+CHE,Schaffhausen,83107,2022,Swiss FSO 2022
+CHE,Schwyz,162157,2022,Swiss FSO 2022
+CHE,Solothurn,278903,2022,Swiss FSO 2022
+CHE,Thurgau,285095,2022,Swiss FSO 2022
+CHE,Ticino,354375,2022,Swiss FSO 2022
+CHE,Uri,36703,2022,Swiss FSO 2022
+CHE,Valais,348503,2022,Swiss FSO 2022
+CHE,Vaud,814762,2022,Swiss FSO 2022
+CHE,Zug,127642,2022,Swiss FSO 2022
+CHE,Zürich,1539275,2022,Swiss FSO 2022
+BEL,Antwerp,1867366,2022,Statbel Belgium 2022
+BEL,Brussels,1218255,2022,Statbel 2022
+BEL,East Flanders,1528157,2022,Statbel 2022
+BEL,Flemish Brabant,1143603,2022,Statbel 2022
+BEL,Hainaut,1345371,2022,Statbel 2022
+BEL,Liege,1109800,2022,Statbel 2022
+BEL,Limburg,880397,2022,Statbel 2022
+BEL,Luxembourg,288886,2022,Statbel 2022
+BEL,Namur,503591,2022,Statbel 2022
+BEL,Walloon Brabant,409359,2022,Statbel 2022
+BEL,West Flanders,1196243,2022,Statbel 2022
+GBR,Aberdeen,229060,2021,ONS Census 2021
+GBR,Aberdeenshire,261470,2021,ONS Census 2021
+GBR,Anglesey,69751,2021,ONS Census 2021
+GBR,Angus,116480,2021,ONS Census 2021
+GBR,Antrim,53438,2021,NISRA Census 2021
+GBR,Ards,73244,2021,NISRA Census 2021
+GBR,Argyll and Bute,87130,2021,ONS Census 2021
+GBR,Armagh,54263,2021,NISRA Census 2021
+GBR,Ballymena,59828,2021,NISRA Census 2021
+GBR,Ballymoney,31943,2021,NISRA Census 2021
+GBR,Banbridge,45649,2021,NISRA Census 2021
+GBR,Barking and Dagenham,218023,2021,ONS Census 2021
+GBR,Barnet,395869,2021,ONS Census 2021
+GBR,Barnsley,244607,2021,ONS Census 2021
+GBR,Bath and North East Somerset,193474,2021,ONS Census 2021
+GBR,Bedford,182573,2021,ONS Census 2021
+GBR,Belfast,343542,2021,NISRA Census 2021
+GBR,Bexley,249178,2021,ONS Census 2021
+GBR,Birmingham,1144919,2021,ONS Census 2021
+GBR,Blackburn with Darwen,149843,2021,ONS Census 2021
+GBR,Blackpool,148403,2021,ONS Census 2021
+GBR,Blaenau Gwent,67880,2021,ONS Census 2021
+GBR,Bolton,311263,2021,ONS Census 2021
+GBR,Bournemouth,399380,2021,ONS Census 2021
+GBR,Bracknell Forest,122952,2021,ONS Census 2021
+GBR,Bradford,546428,2021,ONS Census 2021
+GBR,Brent,333418,2021,ONS Census 2021
+GBR,Bridgend,145300,2021,ONS Census 2021
+GBR,Brighton and Hove,277207,2021,ONS Census 2021
+GBR,Bristol,472486,2021,ONS Census 2021
+GBR,Bromley,333700,2021,ONS Census 2021
+GBR,Buckinghamshire,545384,2021,ONS Census 2021
+GBR,Bury,190862,2021,ONS Census 2021
+GBR,Caerphilly,181866,2021,ONS Census 2021
+GBR,Calderdale,235263,2021,ONS Census 2021
+GBR,Cambridgeshire,655243,2021,ONS Census 2021
+GBR,Camden,270029,2021,ONS Census 2021
+GBR,Cardiff,362400,2021,ONS Census 2021
+GBR,Carmarthenshire,186657,2021,ONS Census 2021
+GBR,Carrickfergus,39137,2021,NISRA Census 2021
+GBR,Castlereagh,66711,2021,NISRA Census 2021
+GBR,Central Bedfordshire,288843,2021,ONS Census 2021
+GBR,Ceredigion,71737,2021,ONS Census 2021
+GBR,Cheshire East,399261,2021,ONS Census 2021
+GBR,Cheshire West and Chester,356989,2021,ONS Census 2021
+GBR,City,8600,2021,ONS Census 2021
+GBR,Clackmannanshire,51000,2021,ONS Census 2021
+GBR,Coleraine,56315,2021,NISRA Census 2021
+GBR,Conwy,115945,2021,ONS Census 2021
+GBR,Cornwall,568210,2021,ONS Census 2021
+GBR,Coventry,371521,2021,ONS Census 2021
+GBR,Craigavon,90560,2021,NISRA Census 2021
+GBR,Croydon,399851,2021,ONS Census 2021
+GBR,Cumbria,498888,2021,ONS Census 2021
+GBR,Darlington,107766,2021,ONS Census 2021
+GBR,Denbighshire,93822,2021,ONS Census 2021
+GBR,Derby,261378,2021,ONS Census 2021
+GBR,Derbyshire,793580,2021,ONS Census 2021
+GBR,Derry,107877,2021,NISRA Census 2021
+GBR,Devon,777467,2021,ONS Census 2021
+GBR,Doncaster,310000,2021,ONS Census 2021
+GBR,Dorset,376484,2021,ONS Census 2021
+GBR,Down,67179,2021,NISRA Census 2021
+GBR,Dudley,341532,2021,ONS Census 2021
+GBR,Dumfries and Galloway,149710,2021,ONS Census 2021
+GBR,Dundee,148270,2021,ONS Census 2021
+GBR,Dungannon,57852,2021,NISRA Census 2021
+GBR,Durham,533681,2021,ONS Census 2021
+GBR,Ealing,362767,2021,ONS Census 2021
+GBR,East Ayrshire,122060,2021,ONS Census 2021
+GBR,East Dunbartonshire,107630,2021,ONS Census 2021
+GBR,East Lothian,108060,2021,ONS Census 2021
+GBR,East Renfrewshire,95560,2021,ONS Census 2021
+GBR,East Riding of Yorkshire,342060,2021,ONS Census 2021
+GBR,East Sussex,554782,2021,ONS Census 2021
+GBR,Edinburgh,524930,2021,ONS Census 2021
+GBR,Eilean Siar,26830,2021,ONS Census 2021
+GBR,Enfield,333870,2021,ONS Census 2021
+GBR,Essex,1492784,2021,ONS Census 2021
+GBR,Falkirk,160390,2021,ONS Census 2021
+GBR,Fermanagh,61805,2021,NISRA Census 2021
+GBR,Fife,373890,2021,ONS Census 2021
+GBR,Flintshire,153600,2021,ONS Census 2021
+GBR,Gateshead,202508,2021,ONS Census 2021
+GBR,Glasgow,635130,2021,ONS Census 2021
+GBR,Gloucestershire,651700,2021,ONS Census 2021
+GBR,Greenwich,286180,2021,ONS Census 2021
+GBR,Gwynedd,121874,2021,ONS Census 2021
+GBR,Hackney,281750,2021,ONS Census 2021
+GBR,Halton,126980,2021,ONS Census 2021
+GBR,Hammersmith and Fulham,183770,2021,ONS Census 2021
+GBR,Hampshire,1371400,2021,ONS Census 2021
+GBR,Haringey,254926,2021,ONS Census 2021
+GBR,Harrow,250958,2021,ONS Census 2021
+GBR,Hartlepool,94480,2021,ONS Census 2021
+GBR,Havering,264009,2021,ONS Census 2021
+GBR,Herefordshire,192100,2021,ONS Census 2021
+GBR,Hertfordshire,1194000,2021,ONS Census 2021
+GBR,Highland,232680,2021,ONS Census 2021
+GBR,Hillingdon,304800,2021,ONS Census 2021
+GBR,Hounslow,276900,2021,ONS Census 2021
+GBR,Inverclyde,76870,2021,ONS Census 2021
+GBR,Isle of Wight,141535,2021,ONS Census 2021
+GBR,Isles of Scilly,2239,2021,ONS Census 2021
+GBR,Islington,239142,2021,ONS Census 2021
+GBR,Kensington and Chelsea,150900,2021,ONS Census 2021
+GBR,Kent,1601000,2021,ONS Census 2021
+GBR,Kingston upon Hull,260645,2021,ONS Census 2021
+GBR,Kingston upon Thames,175474,2021,ONS Census 2021
+GBR,Kirklees,457000,2021,ONS Census 2021
+GBR,Knowsley,148597,2021,ONS Census 2021
+GBR,Lambeth,318000,2021,ONS Census 2021
+GBR,Lancashire,1226600,2021,ONS Census 2021
+GBR,Larne,32064,2021,NISRA Census 2021
+GBR,Leeds,812000,2021,ONS Census 2021
+GBR,Leicester,368600,2021,ONS Census 2021
+GBR,Leicestershire,713000,2021,ONS Census 2021
+GBR,Lewisham,303536,2021,ONS Census 2021
+GBR,Limavady,33264,2021,NISRA Census 2021
+GBR,Lincolnshire,768400,2021,ONS Census 2021
+GBR,Lisburn,120165,2021,NISRA Census 2021
+GBR,Liverpool,496784,2021,ONS Census 2021
+GBR,Luton,225301,2021,ONS Census 2021
+GBR,Magherafelt,44000,2021,NISRA Census 2021
+GBR,Manchester,596000,2021,ONS Census 2021
+GBR,Medway,282000,2021,ONS Census 2021
+GBR,Merseyside,1400000,2021,ONS Census 2021
+GBR,Merthyr Tydfil,63500,2021,ONS Census 2021
+GBR,Merton,207600,2021,ONS Census 2021
+GBR,Mid Ulster,145390,2021,NISRA Census 2021
+GBR,Middlesbrough,143600,2021,ONS Census 2021
+GBR,Midlothian,91350,2021,ONS Census 2021
+GBR,Milton Keynes,287017,2021,ONS Census 2021
+GBR,Monmouthshire,92843,2021,ONS Census 2021
+GBR,Moray,96790,2021,ONS Census 2021
+GBR,Moyle,17490,2021,NISRA Census 2021
+GBR,Neath Port Talbot,140700,2021,ONS Census 2021
+GBR,Newcastle upon Tyne,300196,2021,ONS Census 2021
+GBR,Newham,387759,2021,ONS Census 2021
+GBR,Newport,157000,2021,ONS Census 2021
+GBR,Newry and Mourne,99264,2021,NISRA Census 2021
+GBR,Newtownabbey,85139,2021,NISRA Census 2021
+GBR,Norfolk,906100,2021,ONS Census 2021
+GBR,North Ayshire,134900,2021,ONS Census 2021
+GBR,North Down,79995,2021,NISRA Census 2021
+GBR,North East Lincolnshire,160100,2021,ONS Census 2021
+GBR,North Lanarkshire,340240,2021,ONS Census 2021
+GBR,North Lincolnshire,172700,2021,ONS Census 2021
+GBR,North Somerset,219372,2021,ONS Census 2021
+GBR,North Tyneside,208730,2021,ONS Census 2021
+GBR,North Yorkshire,615900,2021,ONS Census 2021
+GBR,Northamptonshire,756000,2021,ONS Census 2021
+GBR,Northumberland,320200,2021,ONS Census 2021
+GBR,Nottingham,323700,2021,ONS Census 2021
+GBR,Nottinghamshire,831600,2021,ONS Census 2021
+GBR,Oldham,237100,2021,ONS Census 2021
+GBR,Omagh,51053,2021,NISRA Census 2021
+GBR,Orkney,22490,2021,ONS Census 2021
+GBR,Oxfordshire,702000,2021,ONS Census 2021
+GBR,Pembrokeshire,125055,2021,ONS Census 2021
+GBR,Perthshire and Kinross,151710,2021,ONS Census 2021
+GBR,Peterborough,215100,2021,ONS Census 2021
+GBR,Plymouth,264200,2021,ONS Census 2021
+GBR,Poole,149000,2021,ONS Census 2021
+GBR,Portsmouth,205100,2021,ONS Census 2021
+GBR,Powys,131997,2021,ONS Census 2021
+GBR,Reading,174224,2021,ONS Census 2021
+GBR,Redbridge,303858,2021,ONS Census 2021
+GBR,Redcar and Cleveland,136100,2021,ONS Census 2021
+GBR,Renfrewshire,176760,2021,ONS Census 2021
+GBR,Rhondda Cynon Taff,240682,2021,ONS Census 2021
+GBR,Richmond upon Thames,195896,2021,ONS Census 2021
+GBR,Rochdale,223580,2021,ONS Census 2021
+GBR,Rotherham,261900,2021,ONS Census 2021
+GBR,Royal Borough of Windsor and Maidenhead,153800,2021,ONS Census 2021
+GBR,Rutland,41779,2021,ONS Census 2021
+GBR,Salford,267400,2021,ONS Census 2021
+GBR,Sandwell,340900,2021,ONS Census 2021
+GBR,Scottish Borders,114960,2021,ONS Census 2021
+GBR,Sefton,272100,2021,ONS Census 2021
+GBR,Sheffield,584853,2021,ONS Census 2021
+GBR,Shetland Islands,22920,2021,ONS Census 2021
+GBR,Shropshire,320252,2021,ONS Census 2021
+GBR,Slough,168400,2021,ONS Census 2021
+GBR,Solihull,218477,2021,ONS Census 2021
+GBR,Somerset,570300,2021,ONS Census 2021
+GBR,South Ayrshire,113960,2021,ONS Census 2021
+GBR,South Gloucestershire,285000,2021,ONS Census 2021
+GBR,South Lanarkshire,318640,2021,ONS Census 2021
+GBR,South Tyneside,149800,2021,ONS Census 2021
+GBR,Southampton,248900,2021,ONS Census 2021
+GBR,Southend-on-Sea,184700,2021,ONS Census 2021
+GBR,Southwark,320000,2021,ONS Census 2021
+GBR,Staffordshire,884131,2021,ONS Census 2021
+GBR,Stirling,96140,2021,ONS Census 2021
+GBR,Stockport,295000,2021,ONS Census 2021
+GBR,Stockton-on-Tees,197600,2021,ONS Census 2021
+GBR,Stoke-on-Trent,255833,2021,ONS Census 2021
+GBR,Strabane,39843,2021,NISRA Census 2021
+GBR,Suffolk,756000,2021,ONS Census 2021
+GBR,Sunderland,274000,2021,ONS Census 2021
+GBR,Surrey,1176400,2021,ONS Census 2021
+GBR,Sutton,206349,2021,ONS Census 2021
+GBR,Swansea,238700,2021,ONS Census 2021
+GBR,Swindon,222153,2021,ONS Census 2021
+GBR,Tameside,231700,2021,ONS Census 2021
+GBR,Telford and Wrekin,179800,2021,ONS Census 2021
+GBR,Thurrock,173596,2021,ONS Census 2021
+GBR,Torbay,134000,2021,ONS Census 2021
+GBR,Torfaen,91075,2021,ONS Census 2021
+GBR,Tower Hamlets,310300,2021,ONS Census 2021
+GBR,Trafford,235100,2021,ONS Census 2021
+GBR,Vale of Glamorgan,133200,2021,ONS Census 2021
+GBR,Wakefield,352000,2021,ONS Census 2021
+GBR,Walsall,286700,2021,ONS Census 2021
+GBR,Waltham Forest,276700,2021,ONS Census 2021
+GBR,Wandsworth,330600,2021,ONS Census 2021
+GBR,Warrington,210100,2021,ONS Census 2021
+GBR,Warwickshire,590000,2021,ONS Census 2021
+GBR,West Berkshire,159600,2021,ONS Census 2021
+GBR,West Dunbartonshire,89600,2021,ONS Census 2021
+GBR,West Lothian,182100,2021,ONS Census 2021
+GBR,West Sussex,892200,2021,ONS Census 2021
+GBR,Westminster,261300,2021,ONS Census 2021
+GBR,Wigan,330100,2021,ONS Census 2021
+GBR,Wiltshire,502000,2021,ONS Census 2021
+GBR,Wokingham,170000,2021,ONS Census 2021
+GBR,Wolverhampton,263700,2021,ONS Census 2021
+GBR,Worcestershire,594300,2021,ONS Census 2021
+GBR,Wrexham,136800,2021,ONS Census 2021
+GBR,York,209893,2021,ONS Census 2021
+

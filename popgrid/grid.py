@@ -204,11 +204,12 @@ def generate_cells(
             landmass_id,
             n_miss,
         )
-        missing_centres = centres_gdf.loc[miss_mask.index].copy()
+        miss_idx = joined.index[miss_mask]
+        missing_centres = centres_gdf.loc[miss_idx].copy()
         nearest = gpd.sjoin_nearest(missing_centres, reg_sub, how="left")
         nearest = nearest[~nearest.index.duplicated(keep="first")]
-        joined.loc[miss_mask, ["region_id", "region_name"]] = (
-            nearest[["region_id", "region_name"]].values
+        joined.loc[miss_idx, ["region_id", "region_name"]] = (
+            nearest.loc[miss_idx, ["region_id", "region_name"]].values
         )
 
     joined = joined.drop(columns=["index_right"], errors="ignore")

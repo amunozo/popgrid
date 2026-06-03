@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # How many cells of tolerance to use when deciding inline vs panel.
 # 5 cells ≈ 112 km for Spain, enough to include Ceuta & Melilla inline.
-INLINE_MARGIN_CELLS: int = 5
+INLINE_MARGIN_CELLS: int = 20
 
 
 # ── Colour palettes ───────────────────────────────────────────────────────────
@@ -90,6 +90,76 @@ def build_color_map(
     if not isinstance(colors, list):
         colors = _PALETTE_QUAL
     return {name: colors[i % len(colors)] for i, name in enumerate(unique)}
+
+
+def _color_distance(a: str, b: str) -> float:
+    """Perceptual-ish RGB distance between two hex colours (0–~1.7)."""
+    ar, ag, ab = mcolors.to_rgb(a)
+    br, bg, bb = mcolors.to_rgb(b)
+    # Weighted Euclidean (eye is most sensitive to green, least to blue).
+    return (0.30 * (ar - br) ** 2 + 0.59 * (ag - bg) ** 2 + 0.11 * (ab - bb) ** 2) ** 0.5
+
+
+def build_adjacency_color_map(
+    region_names: list[str],
+    adjacency: dict[str, set],
+    palette: str | list[str] = "qual",
+    sizes: dict[str, int] | None = None,
+) -> dict[str, str]:
+    """
+    Assign a palette colour to every region so that **adjacent regions are
+    always visually distinct** and, additionally, **the largest regions are
+    distinct from one another** even when they are not adjacent.
+
+    Regions are coloured largest-first (by ``sizes``, falling back to adjacency
+    degree).  Each region takes the palette colour that maximises the minimum
+    colour distance to its already-coloured neighbours; among the biggest
+    regions an extra reward keeps them far apart in colour space, so two large
+    blocks never share a hue (e.g. Japan's Kanto and Shikoku, China's Henan and
+    Sichuan).  Ties break toward the least-used colour to keep the map balanced.
+    """
+    from collections import Counter
+
+    unique = sorted(r for r in set(region_names) if r is not None)
+    colors = PALETTES.get(palette, palette) if isinstance(palette, str) else palette  # type: ignore[arg-type]
+    if not isinstance(colors, list) or not colors:
+        colors = _PALETTE_QUAL
+
+    sizes = sizes or {}
+    # Largest first (then most-connected), so the dominant regions claim
+    # well-separated colours before the small ones fill in around them.
+    order = sorted(
+        unique,
+        key=lambda r: (-sizes.get(r, 0), -len(adjacency.get(r, set()))),
+    )
+    # The "big" regions that must be mutually distinct: the top regions by
+    # size, capped by how many palette colours exist.
+    n_big = min(len(colors), max(1, len(order) // 2))
+    big_set = set(order[:n_big])
+
+    assigned: dict[str, str] = {}
+    big_colors: list[str] = []
+    usage: Counter = Counter()
+
+    for region in order:
+        neigh_colors = [
+            assigned[n] for n in adjacency.get(region, set()) if n in assigned
+        ]
+        best, best_score = colors[0], -1e9
+        for c in colors:
+            d_neigh = min((_color_distance(c, nc) for nc in neigh_colors), default=10.0)
+            score = d_neigh - 0.05 * usage[c]
+            if region in big_set and big_colors:
+                # Reward distance from the colours already taken by big regions.
+                score += 0.6 * min(_color_distance(c, bc) for bc in big_colors)
+            if score > best_score:
+                best_score, best = score, c
+        assigned[region] = best
+        usage[best] += 1
+        if region in big_set:
+            big_colors.append(best)
+
+    return assigned
 
 
 # ── Cell rendering ────────────────────────────────────────────────────────────
@@ -323,12 +393,42 @@ def _plot_cells(
         n_cells = len(grp)
         if n_cells < label_min_cells:
             continue
-        label_cx = grp["cx"].mean()
-        label_cy = grp["cy"].mean()
+        # Place the label at the centroid of the region's LARGEST contiguous
+        # block, not the mean of all its cells.  For interleaved central
+        # regions the plain mean can land outside the region or on top of a
+        # neighbour's label; the largest-cluster centroid always sits on the
+        # region's own body.
+        gcx = grp["cx"].to_numpy()
+        gcy = grp["cy"].to_numpy()
+        gminx, gminy = gcx.min(), gcy.min()
+        keys = {
+            (round((x - gminx) / cell_size), round((y - gminy) / cell_size)): (x, y)
+            for x, y in zip(gcx, gcy)
+        }
+        seen: set = set()
+        best_comp: list = []
+        for start in keys:
+            if start in seen:
+                continue
+            comp = [start]
+            stack = [start]
+            seen.add(start)
+            while stack:
+                ci, cj = stack.pop()
+                for nb in ((ci + 1, cj), (ci - 1, cj), (ci, cj + 1), (ci, cj - 1)):
+                    if nb in keys and nb not in seen:
+                        seen.add(nb)
+                        comp.append(nb)
+                        stack.append(nb)
+            if len(comp) > len(best_comp):
+                best_comp = comp
+        pts = np.array([keys[k] for k in best_comp])
+        label_cx = float(pts[:, 0].mean())
+        label_cy = float(pts[:, 1].mean())
         bg = color_map.get(region_name, "#cccccc")  # type: ignore[arg-type]
         fg = _text_color(bg)
         outline = "#00000066" if fg == "#ffffff" else "#ffffff99"
-        fontsize = float(np.clip(5.0 + np.sqrt(n_cells) * 0.9, 5.0, 11.0))
+        fontsize = float(np.clip(5.0 + np.sqrt(len(best_comp)) * 0.9, 5.0, 11.0))
         ax.text(
             label_cx, label_cy, region_name,
             fontsize=fontsize, ha="center", va="center",
@@ -832,16 +932,23 @@ def create_figure(
     footer_ax.axis("off")
     footer_ax.set_facecolor(background_color)
 
-    _source_text = data_source or "Natural Earth (ne_10m_admin_1_states_provinces) · popgrid"
-    footer_ax.text(
-        0.014, 0.65,
-        f"Source: {_source_text}",
-        transform=footer_ax.transAxes,
-        ha="left", va="center",
-        fontsize=9,
-        color="#5E7D6A",
-        fontstyle="italic",
-    )
+    # An explicit blank/whitespace data_source means "no footer" (used by the
+    # compare view, which draws one shared source line). None falls back to the
+    # default attribution.
+    if data_source is not None and not str(data_source).strip():
+        _source_text = None
+    else:
+        _source_text = data_source or "Natural Earth (ne_10m_admin_1_states_provinces) · popgrid"
+    if _source_text:
+        footer_ax.text(
+            0.014, 0.65,
+            f"Source: {_source_text}",
+            transform=footer_ax.transAxes,
+            ha="left", va="center",
+            fontsize=9,
+            color="#5E7D6A",
+            fontstyle="italic",
+        )
 
     fig.patch.set_facecolor(background_color)
     return fig

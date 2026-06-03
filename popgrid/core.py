@@ -19,11 +19,20 @@ from typing import Optional
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import shapely
 
-from .data import load_country_regions, REGION_LABELS
+from .data import (
+    load_country_regions,
+    load_region_populations,
+    admin1_parent_map,
+    RECOMMENDED_SETTINGS,
+    REGION_LABELS,
+)
 from .geometry import detect_landmasses, project_regions
 from .grid import cell_size_for_n, generate_cells
-from .render import build_color_map, create_figure
+from .render import build_adjacency_color_map, build_color_map, create_figure
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +123,165 @@ def _prepare_custom_gdf(
     return result
 
 
+def _hamilton_quotas(raw: dict[str, float], n: int) -> dict[str, int]:
+    """
+    Allocate *n* integer seats using the Hamilton / largest-remainder method.
+
+    Guarantees ``sum(result.values()) == n``.
+    """
+    floor_q = {k: int(v) for k, v in raw.items()}
+    remainders = {k: raw[k] - floor_q[k] for k in raw}
+    deficit = n - sum(floor_q.values())
+    for k in sorted(remainders, key=lambda k: -remainders[k])[:deficit]:
+        floor_q[k] += 1
+    return floor_q
+
+
+def _subsample_to_quota(
+    cells: gpd.GeoDataFrame,
+    quotas: dict[str, int],
+) -> gpd.GeoDataFrame:
+    """
+    For each region keep at most ``quotas[region_name]`` cells.
+
+    Uses uniform random sampling (random_state=42 for reproducibility) to
+    preserve the region's geographic shape — cells are sampled uniformly
+    across the region's extent, maintaining its boundary silhouette rather
+    than collapsing to a centroid blob.
+    """
+    kept = []
+    for region_name, group in cells.groupby("region_name"):
+        quota = quotas.get(str(region_name), len(group))
+        if len(group) <= quota:
+            kept.append(group)
+        else:
+            kept.append(group.sample(n=quota, random_state=42))
+    if not kept:
+        return cells.iloc[:0].copy()
+    return pd.concat(kept).reset_index(drop=True)
+
+
+def _weighted_voronoi_cells(
+    landmass_geom: "shapely.Geometry",
+    regions_proj: gpd.GeoDataFrame,
+    cell_size: float,
+    landmass_id: int,
+    quotas: dict[str, int],
+) -> gpd.GeoDataFrame:
+    """
+    Partition a landmass into grid cells using an iteratively balanced
+    weighted Voronoi.
+
+    **Algorithm**
+
+    1. Generate a regular grid inside the landmass boundary.
+    2. Compute ``score[cell, region] = dist²(cell, centroid) / w[region]``.
+    3. Assign each cell to the region with the lowest score.
+    4. Check actual counts vs target quotas.
+    5. Multiplicatively update weights: ``w ← w × (target / actual)``
+       — over-quota regions shrink, under-quota regions grow.
+    6. Repeat steps 2-5 until counts match quotas (≤ 1 cell off per region)
+       or 30 iterations elapse.
+
+    The result is connected, population-proportional, and preserves the
+    country's overall geographic shape (cells are still inside the boundary,
+    and region centroids keep their relative positions).
+
+    Parameters
+    ----------
+    landmass_geom:
+        Projected LAEA geometry for the entire landmass.
+    regions_proj:
+        Projected GeoDataFrame for regions in this landmass.
+    cell_size:
+        Grid cell side length in metres — same as AreaGrid cell_size.
+    landmass_id:
+        Integer tag written into every output row.
+    quotas:
+        Global ``{region_name: n_cells}`` mapping from Hamilton allocation.
+    """
+    if regions_proj.empty:
+        return gpd.GeoDataFrame()
+
+    minx, miny, maxx, maxy = landmass_geom.bounds
+    half = cell_size / 2.0
+    xs = np.arange(minx + half, maxx, cell_size)
+    ys = np.arange(miny + half, maxy, cell_size)
+
+    if xs.size == 0 or ys.size == 0:
+        return generate_cells(landmass_geom, regions_proj, cell_size, landmass_id)
+
+    xx, yy = np.meshgrid(xs, ys)
+    cx_all = xx.ravel()
+    cy_all = yy.ravel()
+
+    pts = shapely.points(cx_all, cy_all)
+    inside = shapely.contains_properly(landmass_geom, pts)
+
+    if not inside.any():
+        return generate_cells(landmass_geom, regions_proj, cell_size, landmass_id)
+
+    cx_in = cx_all[inside]
+    cy_in = cy_all[inside]
+    n_cells = int(inside.sum())
+
+    # ── Region metadata ───────────────────────────────────────────────────────
+    centroids_x = np.array([row.geometry.centroid.x for _, row in regions_proj.iterrows()])
+    centroids_y = np.array([row.geometry.centroid.y for _, row in regions_proj.iterrows()])
+    q_raw = np.array(
+        [max(float(quotas.get(str(row["region_name"]), 1)), 1.0)
+         for _, row in regions_proj.iterrows()]
+    )
+    names = regions_proj["region_name"].tolist()
+    ids   = regions_proj["region_id"].tolist()
+
+    # Scale quotas to this landmass's actual cell count so they sum to n_cells
+    q_target = q_raw * (n_cells / q_raw.sum())
+
+    # ── Iterative balanced Voronoi ────────────────────────────────────────────
+    # Precompute distance matrix (n_cells × n_regions) — done once, reused.
+    dx = cx_in[:, np.newaxis] - centroids_x[np.newaxis, :]
+    dy = cy_in[:, np.newaxis] - centroids_y[np.newaxis, :]
+    dist2 = dx ** 2 + dy ** 2
+
+    w = q_target.copy()
+    winner = np.zeros(n_cells, dtype=int)
+
+    for _iter in range(50):
+        score  = dist2 / np.maximum(w[np.newaxis, :], 1e-9)
+        winner = np.argmin(score, axis=1)
+        counts = np.bincount(winner, minlength=len(w)).astype(float)
+
+        if np.max(np.abs(counts - np.round(q_target))) <= 1:
+            break
+
+        # Damped multiplicative update (exponent 0.5 prevents oscillation):
+        # over-quota → w decreases → region wins fewer cells next round
+        ratio = q_target / np.maximum(counts, 0.5)
+        w = w * np.power(ratio, 0.5)
+        w = np.clip(w, q_target * 0.001, q_target * 10_000)
+
+    # ── Build result GeoDataFrame ─────────────────────────────────────────────
+    boxes = shapely.box(cx_in - half, cy_in - half, cx_in + half, cy_in + half)
+
+    cells = gpd.GeoDataFrame(
+        {
+            "cx":          cx_in,
+            "cy":          cy_in,
+            "region_id":   [ids[i]   for i in winner],
+            "region_name": [names[i] for i in winner],
+            "landmass_id": landmass_id,
+            "geometry":    boxes,
+        },
+        crs=regions_proj.crs,
+    )
+    logger.info(
+        "Landmass %d: %d cells via balanced Voronoi (%d regions, %d iters).",
+        landmass_id, len(cells), len(regions_proj), _iter + 1,
+    )
+    return cells.reset_index(drop=True)
+
+
 class AreaGrid:
     """
     Population grid map for any country.
@@ -170,6 +338,33 @@ class AreaGrid:
         self._built: bool = False
 
     # ── Build pipeline ────────────────────────────────────────────────────────
+
+    def _assign_stable_colors(self) -> None:
+        """
+        Assign a region → colour map from *mode-invariant* geographic inputs:
+        the real border-adjacency graph and each region's land area. Because
+        neither depends on whether cells are weighted by area or population,
+        an ``AreaGrid`` and a ``PopGrid`` of the same country get **identical
+        colours**, so the two maps can be compared region by region.
+        """
+        from .cartogram import real_adjacency  # local import avoids cycles
+
+        names = self._regions_proj["region_name"].dropna().tolist()
+        try:
+            adjacency = real_adjacency(self._regions_proj)
+        except Exception:  # noqa: BLE001
+            adjacency = {n: set() for n in names}
+        # Land area is a fixed property of each region, identical across grid
+        # modes — used as the "dominant region" key so the same large regions
+        # claim well-separated colours in both maps.
+        sizes = {
+            str(row["region_name"]): float(row.geometry.area)
+            for _, row in self._regions_proj.iterrows()
+            if row["region_name"] is not None and row.geometry is not None
+        }
+        self._color_map = build_adjacency_color_map(
+            names, adjacency, self.palette, sizes=sizes
+        )
 
     def build(self) -> "AreaGrid":
         """
@@ -243,7 +438,7 @@ class AreaGrid:
         #    gets a stable colour even if it received 0 cells (e.g. Hamburg
         #    at low N, or tiny territories at country-wide cell size).
         all_region_names = self._regions_proj["region_name"].dropna().tolist()
-        self._color_map = build_color_map(all_region_names, self.palette)
+        self._assign_stable_colors()
 
         self._built = True
         logger.info(
@@ -506,21 +701,364 @@ class AreaGrid:
             source = f"country='{self.country_iso3}', dissolve_by={self.dissolve_by!r}"
         return f"AreaGrid({source}, n={self.n})  [{status}]"
 
+
+def _fill_outline_holes(geom):
+    """
+    Return ``geom`` with all interior rings removed (only exterior boundaries
+    kept).  The deformed region polygons leave thin gaps between one another;
+    their union therefore has holes, and cells falling in those holes are
+    dropped during rasterisation.  Filling the holes lets every interior cell
+    be rasterised and assigned to its nearest region — no seams.
+    """
+    from shapely.geometry import Polygon, MultiPolygon
+
+    if geom is None or geom.is_empty:
+        return geom
+    if geom.geom_type == "Polygon":
+        return Polygon(geom.exterior.coords)
+    if geom.geom_type == "MultiPolygon":
+        return shapely.union_all(
+            [Polygon(p.exterior.coords) for p in geom.geoms]
+        )
+    return geom
+
+
+def _reanchor_secondary(
+    all_cells: gpd.GeoDataFrame,
+    mainland_id: int,
+    geo_bbox: tuple,
+    def_bbox: tuple,
+    cell_size: float,
+) -> gpd.GeoDataFrame:
+    """
+    Reposition detached-territory cells so they keep the same position relative
+    to the *deformed* mainland that they had relative to the *geographic*
+    mainland.  Without this, deforming the mainland shifts its extent and an
+    enclave such as Melilla drifts outside the inline margin and is wrongly
+    promoted to a detached panel.  The island-classification logic is left
+    untouched; this only restores the enclave's frame.
+    """
+    gx0, gy0, gx1, gy1 = geo_bbox
+    dx0, dy0, dx1, dy1 = def_bbox
+    gw = (gx1 - gx0) or 1.0
+    gh = (gy1 - gy0) or 1.0
+
+    def remap(cx, cy):
+        nx = dx0 + (cx - gx0) / gw * (dx1 - dx0)
+        ny = dy0 + (cy - gy0) / gh * (dy1 - dy0)
+        return nx, ny
+
+    if (all_cells["landmass_id"] != mainland_id).sum() == 0:
+        return all_cells
+    half = cell_size / 2.0
+    out = all_cells.copy()
+    # Translate each detached territory as a rigid block by the offset its
+    # centroid needs in the deformed frame — this keeps the territory's bearing
+    # relative to the cartogram WITHOUT rescaling its internal cell spacing
+    # (per-cell scaling pushed enclaves like Ceuta off the grid lattice).
+    for lm_id, grp in all_cells.groupby("landmass_id"):
+        if lm_id == mainland_id:
+            continue
+        cx0 = float(grp["cx"].mean())
+        cy0 = float(grp["cy"].mean())
+        rx, ry = remap(cx0, cy0)
+        off_x, off_y = rx - cx0, ry - cy0
+        m = out["landmass_id"] == lm_id
+        nx = out.loc[m, "cx"].to_numpy() + off_x
+        ny = out.loc[m, "cy"].to_numpy() + off_y
+        out.loc[m, "cx"] = nx
+        out.loc[m, "cy"] = ny
+        out.loc[m, "geometry"] = shapely.box(nx - half, ny - half, nx + half, ny + half)
+    return out
+
+
 class PopGrid(AreaGrid):
     """
     Population tiled map — each cell represents an equal share of the
     country's population rather than its land area.
 
-    .. note::
-        Not yet implemented. Will be available in v0.4.0.
-        Use :class:`AreaGrid` for land-area tiled maps.
+    Uses the same cell size as :class:`AreaGrid` but allocates cells to
+    regions proportionally to population via the Hamilton / largest-remainder
+    quota method.  Population data is read from the bundled
+    ``resources/population.csv`` covering 24 countries.
+
+    Parameters
+    ----------
+    country_iso3:
+        ISO 3166-1 alpha-3 code, e.g. ``'ESP'``, ``'DEU'``, ``'JPN'``.
+    n:
+        Target number of cells.  Default 1000.
+    dissolve_by, palette, cluster_distance_km, title, subtitle, data_source:
+        Same as :class:`AreaGrid`.
     """
 
     def build(self) -> "PopGrid":
-        raise NotImplementedError(
-            "PopGrid (population-weighted cells) is not yet implemented. "
-            "Use AreaGrid for land-area tiled maps instead:\n\n"
-            "    from popgrid import AreaGrid\n"
-            "    ag = AreaGrid('ESP', dissolve_by='auto')\n"
-            "    ag.plot()"
+        """
+        Population cartogram pipeline.
+
+        Instead of clamping cells to the geographic outline (which locks the
+        country shape to geography), every landmass is deformed so that each
+        region's **area becomes proportional to its population**, then the
+        deformed shapes are rasterised into the grid.  The country outline is
+        not imposed — it emerges from the population distribution.  Dense
+        regions bulge, sparse regions pinch, relative position and silhouette
+        are preserved.
+
+        Steps
+        -----
+        1. Load regions, project to equal-area CRS, compute the global cell
+           size (each cell = 100/n % of national population).
+        2. Hamilton-allocate an integer cell quota per region.
+        3. For each landmass: size it to its population quota, then — if it
+           holds more than one region — run a Dougenik contiguous-area
+           cartogram so internal areas track population.  Single-region
+           landmasses (islands, enclaves) keep their literal silhouette,
+           uniformly scaled to their population quota.
+        4. Rasterise the deformed shapes with the standard grid generator.
+        5. Fit every region to its exact quota (trim ragged edges / grow
+           into concavities) so the totals are precise.
+
+        Rendering then reuses the AreaGrid figure builder, so the population
+        cartogram inherits the full DataBites styling (grid, palette, region
+        borders, title, detached-territory inset panels).
+        """
+        from .cartogram import (
+            dougenik_cartogram, scale_to_area, fit_quota,
+            real_adjacency, enforce_topology, fill_gaps,
         )
+
+        # ── 1. Load regions ────────────────────────────────────────────────
+        if self._custom_gdf is not None:
+            logger.info("[1/6] Preparing custom GeoDataFrame …")
+            self._regions_wgs84 = _prepare_custom_gdf(
+                self._custom_gdf, self._custom_region_col
+            )
+        else:
+            logger.info("[1/6] Loading regions for %s …", self.country_iso3)
+            self._regions_wgs84 = load_country_regions(
+                self.country_iso3, dissolve_by=self.dissolve_by
+            )
+
+        # ── 2. Project + global cell size ──────────────────────────────────
+        logger.info("[2/6] Projecting to equal-area CRS …")
+        self._regions_proj, self._crs = project_regions(self._regions_wgs84)
+        total_area_m2: float = self._regions_proj.geometry.union_all().area
+        self._cell_size = cell_size_for_n(total_area_m2, self.n)
+        cell_area = self._cell_size ** 2
+
+        # Simplify only *pathologically* high-vertex outlines (e.g. UK
+        # 'Highlands and Islands' at 4,200+ vertices), whose coastline detail
+        # is wasted on a coarse grid but makes the cartogram's per-iteration
+        # make_valid hang. Per-polygon simplification does not preserve borders
+        # shared between regions, so the threshold is set high enough that
+        # normal adjacent regions (e.g. Spain's Castillas around Madrid) are
+        # never touched — simplifying them would break Madrid's shared border
+        # and wreck its quota.
+        try:
+            simp_tol = self._cell_size * 0.5
+            geoms = list(self._regions_proj.geometry)
+            new_geoms = []
+            for g in geoms:
+                if g is not None and shapely.get_num_coordinates(g) > 2500:
+                    s = shapely.make_valid(g.simplify(simp_tol, preserve_topology=True))
+                    new_geoms.append(s if not s.is_empty else g)
+                else:
+                    new_geoms.append(g)
+            self._regions_proj["geometry"] = gpd.GeoSeries(
+                new_geoms, index=self._regions_proj.index, crs=self._crs
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Geometry simplification skipped: %s", exc)
+
+        # ── 3. Population weights → integer quotas ─────────────────────────
+        logger.info("[3/6] Loading population weights …")
+        region_names: list[str] = self._regions_proj["region_name"].dropna().tolist()
+        # When geometries were dissolved to a coarser level, aggregate the
+        # fine-grained populations up to those parent regions.
+        resolved = self.dissolve_by
+        if resolved == "auto":
+            resolved = RECOMMENDED_SETTINGS.get(
+                self.country_iso3, {}
+            ).get("dissolve_by", None)
+        name_to_parent = (
+            admin1_parent_map(self.country_iso3, resolved) if resolved else None
+        )
+        pop_weights = load_region_populations(
+            self.country_iso3, region_names, name_to_parent=name_to_parent
+        )
+        total_pop = sum(pop_weights.values()) or len(region_names)
+        raw_quotas = {
+            name: self.n * pop_weights.get(name, 0) / total_pop
+            for name in region_names
+        }
+        quotas = _hamilton_quotas(raw_quotas, self.n)
+
+        # Drop regions that round to zero blocks (e.g. tiny disputed reefs like
+        # Paracel Islands at 1,000 people).  They can never be drawn, and their
+        # extreme population ratio destabilises the cartogram force field.
+        keep = {name for name, q in quotas.items() if q >= 1}
+        if len(keep) < len(region_names):
+            dropped = [n for n in region_names if n not in keep]
+            logger.info("Dropping %d zero-block region(s): %s",
+                        len(dropped), ", ".join(dropped))
+            self._regions_proj = self._regions_proj[
+                self._regions_proj["region_name"].isin(keep)
+            ].reset_index(drop=True)
+            region_names = [n for n in region_names if n in keep]
+            quotas = {n: q for n, q in quotas.items() if n in keep}
+
+        # ── 4. Detect landmasses ───────────────────────────────────────────
+        logger.info("[4/6] Detecting landmasses …")
+        # Allow a per-country cluster-distance override (e.g. Japan needs a
+        # tighter 100km so Okinawa separates into its own panel instead of
+        # being bundled with Kyushu and dragged to the far south).
+        cluster_km = self.cluster_distance_km
+        if abs(cluster_km - 200.0) < 1e-6:  # still the default → use recommendation
+            rec_km = RECOMMENDED_SETTINGS.get(
+                self.country_iso3, {}
+            ).get("cluster_distance_km")
+            if rec_km:
+                cluster_km = rec_km
+        raw_lms = detect_landmasses(
+            self._regions_proj,
+            cluster_distance_m=cluster_km * 1_000,
+        )
+
+        # A multi-part region (mainland body + offshore islets) is reported by
+        # detect_landmasses in every cluster it touches.  Rasterising it once
+        # per landmass would multiply its cells.  Assign each region to the
+        # single landmass that overlaps it most, so every region is built once.
+        owner: dict[int, int] = {}
+        for iloc in range(len(self._regions_proj)):
+            g = self._regions_proj.geometry.iloc[iloc]
+            if g is None or g.is_empty:
+                continue
+            best_id, best_area = None, -1.0
+            for lm in raw_lms:
+                if lm.geom.intersects(g):
+                    a = lm.geom.intersection(g).area
+                    if a > best_area:
+                        best_area, best_id = a, lm.id
+            if best_id is not None:
+                owner[iloc] = best_id
+
+        # ── 5. Deform each landmass to population, then rasterise ───────────
+        logger.info("[5/6] Building population cartogram cells …")
+        # Oversize factor counters the perimeter cells lost when a jagged
+        # deformed outline is rasterised; fit_quota trims back to exact counts.
+        OVERSIZE = 1.18
+        cell_frames: list[gpd.GeoDataFrame] = []
+        meta: list[dict] = []
+        mainland_id = raw_lms[0].id if raw_lms else None
+        geo_bbox = None   # mainland bounds before deformation
+        def_bbox = None   # mainland bounds after deformation
+
+        for lm in raw_lms:
+            owned_ilocs = [i for i in lm.region_idx if owner.get(i) == lm.id]
+            regions_sub = (
+                self._regions_proj.iloc[owned_ilocs].copy().reset_index(drop=True)
+            )
+            lm_quota = int(sum(
+                quotas.get(str(n), 0) for n in regions_sub["region_name"]
+            ))
+            entry = {"id": lm.id, "geom": lm.geom, "region_idx": lm.region_idx,
+                     "cells": gpd.GeoDataFrame()}
+            if lm_quota <= 0 or regions_sub.empty:
+                meta.append(entry)
+                continue
+
+            if lm.id == mainland_id:
+                geo_bbox = tuple(regions_sub.total_bounds)
+
+            target_area = lm_quota * cell_area * OVERSIZE
+            shaped = scale_to_area(regions_sub, target_area)
+
+            if len(shaped) > 1:
+                sub_pops = {
+                    str(n): max(float(pop_weights.get(str(n), 1)), 1.0)
+                    for n in shaped["region_name"]
+                }
+                shaped = dougenik_cartogram(
+                    shaped, sub_pops, iterations=60, max_step_fraction=0.5
+                )
+
+            if lm.id == mainland_id:
+                def_bbox = tuple(shaped.total_bounds)
+
+            outline = shapely.make_valid(shaped.geometry.union_all())
+            # Fill the holes the deformed region polygons leave between each
+            # other, so every interior cell is rasterised (and assigned to its
+            # nearest region) instead of dropping through the seams.
+            outline = _fill_outline_holes(outline)
+            cells = generate_cells(outline, shaped, self._cell_size, lm.id)
+            if not cells.empty:
+                cell_frames.append(cells)
+            meta.append(entry)
+
+        # ── 6. Fit to exact per-region quotas, then enforce real borders ───
+        logger.info("[6/6] Fitting quotas and enforcing real-border topology …")
+        if cell_frames:
+            all_cells = gpd.GeoDataFrame(
+                pd.concat(cell_frames, ignore_index=True), crs=cell_frames[0].crs
+            )
+            # Gap-free rasterisation (filled outline) feeds quota fitting and
+            # border enforcement; a final fill_gaps mops up the few seams that
+            # quota-trimming re-opens at internal region borders.
+            all_cells = fit_quota(all_cells, quotas, self._cell_size)
+            radj = real_adjacency(self._regions_proj)
+            all_cells = enforce_topology(all_cells, radj, quotas, self._cell_size)
+            all_cells = fill_gaps(all_cells, self._cell_size, quotas=quotas)
+            # Re-anchor detached territories to the *deformed* mainland frame so
+            # they keep their geographic bearing relative to the cartogram (this
+            # is why an enclave like Melilla must not drift into a panel).
+            if mainland_id is not None and geo_bbox and def_bbox:
+                all_cells = _reanchor_secondary(
+                    all_cells, mainland_id, geo_bbox, def_bbox, self._cell_size
+                )
+            # Snap every cell to one global lattice (the mainland's grid phase)
+            # so detached/ inline territories line up with the main grid instead
+            # of sitting half a cell off. Each landmass is internally cell-spaced,
+            # so this is a uniform per-landmass shift — no collisions.
+            if not all_cells.empty:
+                cs = self._cell_size
+                main_cells = all_cells[all_cells["landmass_id"] == mainland_id]
+                ref = main_cells if not main_cells.empty else all_cells
+                ox = float(ref["cx"].min())
+                oy = float(ref["cy"].min())
+                half = cs / 2.0
+                sx = ox + np.round((all_cells["cx"].to_numpy() - ox) / cs) * cs
+                sy = oy + np.round((all_cells["cy"].to_numpy() - oy) / cs) * cs
+                all_cells["cx"] = sx
+                all_cells["cy"] = sy
+                all_cells["geometry"] = shapely.box(
+                    sx - half, sy - half, sx + half, sy + half
+                )
+        else:
+            all_cells = gpd.GeoDataFrame()
+
+        for entry in meta:
+            if not all_cells.empty:
+                entry["cells"] = (
+                    all_cells[all_cells["landmass_id"] == entry["id"]]
+                    .reset_index(drop=True)
+                )
+        self._landmasses = meta
+
+        all_region_names = self._regions_proj["region_name"].dropna().tolist()
+        # Colour from mode-invariant geography (real adjacency + land area) so
+        # this population map and an AreaGrid of the same country share colours.
+        self._assign_stable_colors()
+        self._built = True
+
+        if self.subtitle is None:
+            pct = round(100 / self.n, 2) if self.n > 0 else 0
+            self.subtitle = (
+                f"Every block = {pct}% of the national population"
+                f"  ({self.total_cells:,} blocks total)"
+            )
+
+        logger.info(
+            "PopGrid build complete — %d landmass(es), %d total cells.",
+            len(self._landmasses), self.total_cells,
+        )
+        return self
