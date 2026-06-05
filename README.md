@@ -107,6 +107,58 @@ Useful flags: `--n` (target block count, default 1000), `--mainland` (drop detac
 
 ---
 
+## ArcGIS Online
+
+The optional helpers in `popgrid.arcgis` publish popgrid blocks to ArcGIS Online as Hosted Feature Layers. The ArcGIS dependency is not required for normal popgrid usage; it is imported only by the publishing helpers.
+
+Install the optional publishing dependencies:
+
+```bash
+pip install arcgis pyshp==2.3.1
+```
+
+Create an ArcGIS API for Python profile:
+
+```python
+from arcgis.gis import login_profiles
+
+login_profiles.create(
+    profile="popgrid_agol",
+    url="https://www.arcgis.com",
+    username="YOUR_USERNAME",
+    password="YOUR_PASSWORD",
+)
+```
+
+Preview the output locally without publishing:
+
+```bash
+python examples/publish_arcgis_online.py ESP --n 200 --mode both --dry-run
+```
+
+Publish area and population as separate Hosted Feature Layers:
+
+```bash
+python examples/publish_arcgis_online.py ESP --n 1000 --mode both --profile popgrid_agol --folder PopGrid
+```
+
+When `--mode both` is used, two services are created so the undeformed land-area grid and the population-adjusted grid do not overlap in the same Feature Service:
+
+```text
+popgrid_ESP_area_n1000
+popgrid_ESP_population_n1000
+```
+
+Each layer is published with region-based symbology from popgrid's `color_hex` values. To reapply that symbology to an existing layer:
+
+```bash
+python examples/style_arcgis_layer.py --profile popgrid_agol --title popgrid_ESP_population_n1000
+```
+
+The published attributes include `iso3`, `mode`, `block_id`, `region`, `color_hex`, `target_n`, `blocks`, `share_pct`, `cell_km`, `land_id`, `cx`, and `cy`.
+
+---
+
 ## Bundled countries
 
 24 countries ship with population data and recommended regional segmentation:
