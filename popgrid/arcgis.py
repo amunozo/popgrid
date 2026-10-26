@@ -211,28 +211,30 @@ def publish_hosted_feature_layer(
     """
     Publish a GeoDataFrame as an ArcGIS Online Hosted Feature Layer.
 
-    Pass an authenticated ``arcgis.gis.GIS`` instance, or omit ``gis`` to use
-    the active/default GIS session configured by the ArcGIS API for Python.
+    ``gis`` must be an authenticated ``arcgis.gis.GIS`` instance, for example
+    ``GIS(profile="popgrid_agol")``. An anonymous session cannot publish.
     """
     if gdf.empty:
         raise ValueError("Cannot publish an empty GeoDataFrame.")
+    if gis is None:
+        raise ValueError(
+            "Publishing needs an authenticated ArcGIS session. Pass one with "
+            "gis=GIS(profile='your_profile'); an anonymous GIS() cannot publish."
+        )
 
     try:
         import pandas as pd
         import shapefile
-        from arcgis import GIS
         from arcgis.features import GeoAccessor, GeoSeriesAccessor  # noqa: F401
     except ImportError as exc:
         raise ImportError(
-            "Publishing requires the ArcGIS API for Python. Install it in this "
-            "environment with: python -m pip install arcgis"
+            "Publishing requires the ArcGIS API for Python. Install it with: "
+            "pip install 'popgrid[arcgis]'"
         ) from exc
     _validate_pyshp_compatibility(shapefile)
 
     publish_gdf = gdf.to_crs("EPSG:4326").copy()
     sdf = GeoAccessor.from_geodataframe(publish_gdf)
-    if gis is None:
-        gis = GIS()
 
     if tags is None:
         tags = ["popgrid", "cartogram", "population", "hosted feature layer"]

@@ -2,6 +2,19 @@
 
 All notable changes to popgrid are documented here.
 
+## [Unreleased]
+
+### Added
+- **Optional ArcGIS Online publishing** (`popgrid.arcgis`), contributed by
+  [@aitorcalero](https://github.com/aitorcalero) in #2: convert popgrid blocks to
+  WGS84 GeoDataFrames, publish them as Hosted Feature Layers with region colours,
+  and two example CLIs. Install with `pip install "popgrid[arcgis]"`; normal use
+  does not need ArcGIS.
+
+### Changed
+- `publish_hosted_feature_layer` now requires an authenticated `GIS` and raises a
+  clear error instead of falling back to an anonymous session that cannot publish.
+
 ## [0.4.0] - 2026-06-03
 
 Custom data release. `from_geodataframe` now drives both `AreaGrid` and

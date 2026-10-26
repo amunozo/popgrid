@@ -6,6 +6,7 @@ from popgrid.arcgis import (
     _hex_to_rgba,
     _validate_pyshp_compatibility,
     grid_cells_to_geodataframe,
+    publish_hosted_feature_layer,
     region_unique_value_renderer,
 )
 
@@ -104,3 +105,14 @@ def test_region_unique_value_renderer_uses_region_colors():
     assert first_symbol["type"] == "esriSFS"
     assert first_symbol["style"] == "esriSFSSolid"
     assert first_symbol["color"] == [242, 153, 74, 218]
+
+
+def test_publish_requires_an_authenticated_gis():
+    gdf = gpd.GeoDataFrame(
+        {"region": ["Madrid"], "color_hex": ["#F2C94C"]},
+        geometry=[shapely.box(0, 0, 1, 1)],
+        crs="EPSG:4326",
+    )
+
+    with pytest.raises(ValueError, match="authenticated ArcGIS session"):
+        publish_hosted_feature_layer(gdf, title="popgrid_test", gis=None)

@@ -114,20 +114,17 @@ The optional helpers in `popgrid.arcgis` publish popgrid blocks to ArcGIS Online
 Install the optional publishing dependencies:
 
 ```bash
-pip install arcgis pyshp==2.3.1
+pip install "popgrid[arcgis]"
 ```
 
 Create an ArcGIS API for Python profile:
 
 ```python
-from arcgis.gis import login_profiles
+from getpass import getpass
+from arcgis.gis import GIS
 
-login_profiles.create(
-    profile="popgrid_agol",
-    url="https://www.arcgis.com",
-    username="YOUR_USERNAME",
-    password="YOUR_PASSWORD",
-)
+# Saves an encrypted profile once; the password is never written in your code
+GIS("https://www.arcgis.com", "YOUR_USERNAME", getpass(), profile="popgrid_agol")
 ```
 
 Preview the output locally without publishing:
