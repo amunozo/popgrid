@@ -12,7 +12,7 @@ All notable changes to popgrid are documented here.
   does not need ArcGIS.
 
 ### Added
-- **`PopGrid(layout="compact")`**: tiles the cartogram outline with compact blobs, one per
+- **`PopGrid(layout="compact")`**: tiles the country's real outline with compact blobs, one per
   region, via an exact-capacity optimal assignment. Drops literal shared borders, but
   avoids the one-cell rings a border-preserving cartogram forces around a dominant region
   (Madrid among Spain's provinces). Default for Spain; `--layout` flag in `generate.py`.

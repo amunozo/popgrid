@@ -908,8 +908,8 @@ class PopGrid(AreaGrid):
         5. Fit every region to its exact quota (trim ragged edges / grow
            into concavities) so the totals are precise.
 
-        With ``layout='compact'``, steps 4–5 are replaced: the deformed outline
-        and region positions from steps 2–3 are re-tiled into compact
+        With ``layout='compact'``, step 3's deformation is skipped and steps
+        4–5 are replaced: the real outline and region positions are tiled into compact
         population blobs with exact quotas (see
         :func:`popgrid.cartogram.compact_assign`), so no quota/topology fitting
         is needed afterwards.
@@ -1095,7 +1095,10 @@ class PopGrid(AreaGrid):
             target_area = lm_quota * cell_area * OVERSIZE
             shaped = scale_to_area(regions_sub, target_area)
 
-            if len(shaped) > 1:
+            # The compact layout tiles the real (undeformed) outline, so the
+            # country keeps its recognisable shape; only the cartogram layout
+            # deforms regions toward population.
+            if len(shaped) > 1 and self.layout != "compact":
                 sub_pops = {
                     str(n): max(float(pop_weights.get(str(n), 1)), 1.0)
                     for n in shaped["region_name"]

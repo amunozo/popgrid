@@ -407,7 +407,7 @@ def compact_assign(
     cell_size: float,
     landmass_id: int,
     lloyd_iterations: int = 4,
-    smooth_cells: float = 2.5,
+    smooth_cells: float = 0.0,
 ) -> gpd.GeoDataFrame:
     """
     Lay a landmass out as compact population blobs instead of a squeezed
@@ -415,14 +415,14 @@ def compact_assign(
 
     A border-preserving cartogram has to inflate a dense region by pushing its
     neighbours aside, so a dominant city-province can become a disc surrounded
-    by one-cell rings.  This alternative keeps the same overall silhouette and
-    region positions but drops the literal borders: it tiles the *deformed*
-    outline with exactly ``quotas[region]`` cells per region and arranges them
+    by one-cell rings.  This alternative keeps the country's real silhouette
+    and region positions but drops the literal borders: it tiles the outline
+    it is given (PopGrid passes the real, undeformed one) with exactly ``quotas[region]`` cells per region and arranges them
     as a discrete power diagram, which yields compact, convex-ish blobs.
 
     Method
     ------
-    1. **Silhouette cells.**  Candidate centres tile the deformed outline's
+    1. **Silhouette cells.**  Candidate centres tile the outline's
        bounding box on the global lattice (same spacing and phase as
        :func:`popgrid.grid.generate_cells`).  Each candidate gets a signed
        distance to the outline boundary: positive inside (depth), negative
@@ -432,7 +432,7 @@ def compact_assign(
        outline (an archipelago) or a tiny landmass, cells are instead grown
        contiguously from the deepest candidate, giving each region one compact
        footprint rather than a scatter of one-cell islets.
-    2. **Seeds.**  Each region's seed is its deformed polygon's
+    2. **Seeds.**  Each region's seed is its polygon's
        ``representative_point()`` — not its centroid, which for a ring-shaped
        region falls inside the hole it surrounds.
     3. **Assignment.**  Cells are assigned to regions with exact capacities
@@ -467,7 +467,9 @@ def compact_assign(
         Radius, in cells, of a morphological opening applied to the outline
         before tiling.  The deformed outline has thin necks where squeezed
         neighbours were pushed aside; whichever region fills a neck becomes a
-        one-cell strip.  Opening removes them.  Default 2.5; 0 disables.
+        one-cell strip.  Opening removes them, at the cost of rounding the
+        coastline.  Default 0 (off): PopGrid passes the real outline, which
+        has no such necks.
 
     Returns
     -------
@@ -544,7 +546,7 @@ def compact_assign(
     cell_x = cx_all[order]
     cell_y = cy_all[order]
 
-    # ── 2. Seeds: representative points of the deformed regions ─────────────
+    # ── 2. Seeds: representative points of the regions ──────────────────────
     reps = shaped.geometry.representative_point()
     seed_x = reps.x.to_numpy(dtype=float)
     seed_y = reps.y.to_numpy(dtype=float)
