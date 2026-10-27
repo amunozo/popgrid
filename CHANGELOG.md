@@ -11,6 +11,17 @@ All notable changes to popgrid are documented here.
   and two example CLIs. Install with `pip install "popgrid[arcgis]"`; normal use
   does not need ArcGIS.
 
+### Added
+- **`PopGrid(layout="compact")`**: tiles the cartogram outline with compact blobs, one per
+  region, via an exact-capacity optimal assignment. Drops literal shared borders, but
+  avoids the one-cell rings a border-preserving cartogram forces around a dominant region
+  (Madrid among Spain's provinces). Default for Spain; `--layout` flag in `generate.py`.
+  Adds a `scipy` dependency.
+
+### Fixed
+- PopGrid now gives every region **exactly** its population quota of blocks. Enclosed
+  regions used to end up far off (Cuenca 11 blocks instead of 4, Madrid 107 instead of 142).
+
 ### Changed
 - **Spain now defaults to its 52 provinces.** `AreaGrid("ESP")` / `PopGrid("ESP")`
   render provinces (INE Census 2021 province populations) instead of the 19 autonomous

@@ -89,7 +89,7 @@ RECOMMENDED_SETTINGS: dict[str, dict] = {
     "PHL": {"dissolve_by": "region"},  # 118 provinces → 17 regions
 
     # ── Already at the correct admin-1 level (no dissolve needed) ────────────
-    "ESP": {"dissolve_by": None},   # 52 provinces
+    "ESP": {"dissolve_by": None, "layout": "compact"},  # 52 provinces
     "DEU": {"dissolve_by": None},   # 16 Bundesländer
     "USA": {"dissolve_by": None},   # 51 states  ← 'region' = census division (4 groups, wrong)
     "BRA": {"dissolve_by": None},   # 27 states

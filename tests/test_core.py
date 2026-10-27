@@ -303,6 +303,33 @@ def test_popgrid_custom_subtitle_respected():
     assert pg.subtitle == "Custom subtitle"
 
 
+# ── PopGrid layout selection ──────────────────────────────────────────────────
+
+def test_popgrid_esp_default_layout_is_compact():
+    """ESP's recommended layout is 'compact'; 'auto' must resolve to it."""
+    from popgrid import PopGrid
+    pg = PopGrid("ESP", n=200)
+    assert pg.layout == "compact"
+
+
+def test_popgrid_invalid_layout_raises():
+    from popgrid import PopGrid
+    with pytest.raises(ValueError, match="layout"):
+        PopGrid("DEU", layout="hexagonal")
+
+
+def test_popgrid_explicit_cartogram_layout_still_works():
+    """layout='cartogram' keeps the contiguous pipeline and exact quotas."""
+    from popgrid import PopGrid
+    pg = PopGrid("DEU", n=1000, layout="cartogram").build()
+    assert pg.layout == "cartogram"
+    counts = _region_counts(pg)
+    for region, quota in pg._quotas.items():
+        assert int(counts.get(region, 0)) == quota, (
+            f"{region}: {int(counts.get(region, 0))} blocks, quota {quota}"
+        )
+
+
 # ── PopGrid.from_geodataframe (custom weight column) ────────────────────────────
 
 def _toy_gdf():

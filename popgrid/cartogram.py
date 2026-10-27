@@ -50,6 +50,7 @@ library keeps a clean ``pip install`` with no compiled dependencies.
 
 from __future__ import annotations
 
+import heapq
 import logging
 
 import geopandas as gpd
@@ -257,6 +258,345 @@ def scale_to_area(gdf: gpd.GeoDataFrame, target_area: float) -> gpd.GeoDataFrame
         for g in out.geometry
     ]
     return out
+
+
+# ── Compact layout (discrete power diagram) ────────────────────────────────────
+
+def _repair_fragments(
+    cell_x: np.ndarray,
+    cell_y: np.ndarray,
+    assigned: np.ndarray,
+    seed_x: np.ndarray,
+    seed_y: np.ndarray,
+    caps: np.ndarray,
+    cell_size: float,
+) -> np.ndarray:
+    """
+    Remove disconnected region fragments from a compact assignment.
+
+    The linear-sum assignment treats cells independently, so a region with a
+    small quota can occasionally receive a cell detached from its main blob.
+    This pass swaps one stray cell of a fragmented region ``R`` with one cell
+    of an adjacent region ``N`` that touches ``R``'s main component: ``R``
+    becomes connected, ``N`` stays connected, and both keep their exact cell
+    counts.  Candidates are ranked by the increase in the squared cell→seed
+    cost, so the assignment's original objective remains the primary one.
+    """
+    n = len(cell_x)
+    minx, miny = float(cell_x.min()), float(cell_y.min())
+
+    def lattice_key(i: int) -> tuple[int, int]:
+        return (
+            round((cell_x[i] - minx) / cell_size),
+            round((cell_y[i] - miny) / cell_size),
+        )
+
+    pos = {lattice_key(i): i for i in range(n)}
+    nbr_cache: dict[int, list[int]] = {}
+
+    def neighbours(i: int) -> list[int]:
+        if i not in nbr_cache:
+            ki, kj = lattice_key(i)
+            found = []
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                j = pos.get((ki + di, kj + dj))
+                if j is not None:
+                    found.append(j)
+            nbr_cache[i] = found
+        return nbr_cache[i]
+
+    def components(region: int, state: np.ndarray) -> list[list[int]]:
+        keys = [i for i in range(n) if state[i] == region]
+        key_set = set(keys)
+        seen: set[int] = set()
+        comps: list[list[int]] = []
+        for start in keys:
+            if start in seen:
+                continue
+            seen.add(start)
+            stack = [start]
+            comp = []
+            while stack:
+                u = stack.pop()
+                comp.append(u)
+                for v in neighbours(u):
+                    if v in key_set and v not in seen:
+                        seen.add(v)
+                        stack.append(v)
+            comps.append(comp)
+        return comps
+
+    def sq_cost(i: int, region: int) -> float:
+        return (cell_x[i] - seed_x[region]) ** 2 + (cell_y[i] - seed_y[region]) ** 2
+
+    state = assigned.copy()
+    for _ in range(100):
+        moved = False
+        for r in range(len(caps)):
+            if caps[r] <= 1:
+                continue
+            comps = components(r, state)
+            if len(comps) <= 1:
+                continue
+            main = max(comps, key=len)
+            main_set = set(main)
+            strays = [i for comp in comps if comp is not main for i in comp]
+            # Work on the stray cell closest to the region's main blob.
+            c = min(
+                strays,
+                key=lambda i: min(
+                    abs(cell_x[i] - cell_x[j]) + abs(cell_y[i] - cell_y[j])
+                    for j in main
+                ),
+            )
+            best = None
+            for rr in {state[j] for j in neighbours(c) if state[j] != r}:
+                # The receiving region must itself be connected; adding c next
+                # to one of its cells then keeps it connected.
+                if len(components(rr, state)) > 1:
+                    continue
+                for d in range(n):
+                    if state[d] != rr or not any(
+                        j in main_set for j in neighbours(d)
+                    ):
+                        continue
+                    # Removing d must not split rr.
+                    state[d] = -1
+                    rest = [i for i in range(n) if state[i] == rr]
+                    ok = True
+                    if rest:
+                        seen = {rest[0]}
+                        stack = [rest[0]]
+                        while stack:
+                            u = stack.pop()
+                            for v in neighbours(u):
+                                if state[v] == rr and v not in seen:
+                                    seen.add(v)
+                                    stack.append(v)
+                        ok = len(seen) == len(rest)
+                    state[d] = rr
+                    # c must touch rr somewhere other than d, or the swap
+                    # leaves c as a detached piece of rr.
+                    if ok and rest and not any(
+                        state[j] == rr and j != d for j in neighbours(c)
+                    ):
+                        ok = False
+                    if not ok:
+                        continue
+                    delta = (
+                        sq_cost(c, rr) + sq_cost(d, r)
+                        - sq_cost(c, r) - sq_cost(d, rr)
+                    )
+                    if best is None or delta < best[0]:
+                        best = (delta, d, rr)
+            if best is not None:
+                _, d, rr = best
+                state[c] = rr
+                state[d] = r
+                moved = True
+                break
+        if not moved:
+            break
+    return state
+
+
+def compact_assign(
+    shaped: gpd.GeoDataFrame,
+    outline,
+    quotas: dict[str, int],
+    cell_size: float,
+    landmass_id: int,
+    lloyd_iterations: int = 4,
+    smooth_cells: float = 2.5,
+) -> gpd.GeoDataFrame:
+    """
+    Lay a landmass out as compact population blobs instead of a squeezed
+    contiguous cartogram.
+
+    A border-preserving cartogram has to inflate a dense region by pushing its
+    neighbours aside, so a dominant city-province can become a disc surrounded
+    by one-cell rings.  This alternative keeps the same overall silhouette and
+    region positions but drops the literal borders: it tiles the *deformed*
+    outline with exactly ``quotas[region]`` cells per region and arranges them
+    as a discrete power diagram, which yields compact, convex-ish blobs.
+
+    Method
+    ------
+    1. **Silhouette cells.**  Candidate centres tile the deformed outline's
+       bounding box on the global lattice (same spacing and phase as
+       :func:`popgrid.grid.generate_cells`).  Each candidate gets a signed
+       distance to the outline boundary: positive inside (depth), negative
+       outside (distance to the outline).  Taking the ``sum(quotas)`` largest
+       values keeps every interior cell before any exterior one, so the cell
+       count is exact and the shape follows the outline.  For a multi-part
+       outline (an archipelago) or a tiny landmass, cells are instead grown
+       contiguously from the deepest candidate, giving each region one compact
+       footprint rather than a scatter of one-cell islets.
+    2. **Seeds.**  Each region's seed is its deformed polygon's
+       ``representative_point()`` — not its centroid, which for a ring-shaped
+       region falls inside the hole it surrounds.
+    3. **Assignment.**  Cells are assigned to regions with exact capacities
+       (each region's column repeated ``quota`` times) by solving a linear
+       sum assignment on squared cell→seed distances
+       (``scipy.optimize.linear_sum_assignment``).  This is a discrete power
+       diagram, so regions come out as compact blobs.  A capacity-preserving
+       swap pass then repairs any one-cell fragment the lattice assignment
+       left behind, keeping the squared-cost solution primary.
+    4. **Lloyd refinement.**  ``lloyd_iterations`` times: move each seed to
+       ``0.5 * (centroid of its cells) + 0.5 * (its representative point)``
+       and re-solve the assignment.  The cells stay compact without drifting
+       away from the region's anchor on the deformed map.
+
+    Parameters
+    ----------
+    shaped:
+        Deformed (population-sized) projected region polygons for this
+        landmass; ``region_id`` / ``region_name`` are preserved.
+    outline:
+        The deformed landmass outline (union, holes filled).  Its lattice
+        supplies the candidate cells and the signed-distance shape.
+    quotas:
+        ``{region_name: cell quota}``; the landmass total is their sum.
+    cell_size:
+        Square cell side length in projected units (metres).
+    landmass_id:
+        Integer tag written into every output row.
+    lloyd_iterations:
+        Number of seed/assignment refinement rounds.  Default 4.
+    smooth_cells:
+        Radius, in cells, of a morphological opening applied to the outline
+        before tiling.  The deformed outline has thin necks where squeezed
+        neighbours were pushed aside; whichever region fills a neck becomes a
+        one-cell strip.  Opening removes them.  Default 2.5; 0 disables.
+
+    Returns
+    -------
+    GeoDataFrame with the standard cell schema: ``cx``, ``cy``,
+    ``region_id``, ``region_name``, ``landmass_id`` and square ``geometry``
+    boxes.
+    """
+    from scipy.optimize import linear_sum_assignment
+
+    if shaped.empty:
+        return gpd.GeoDataFrame()
+
+    names = [str(n) for n in shaped["region_name"]]
+    caps = np.array([max(int(quotas.get(n, 0)), 0) for n in names], dtype=int)
+    n_cells = int(caps.sum())
+    if n_cells <= 0:
+        return gpd.GeoDataFrame()
+
+    half = cell_size / 2.0
+    if smooth_cells > 0:
+        r = smooth_cells * cell_size
+        opened = shapely.make_valid(outline.buffer(-r).buffer(r))
+        # Keep the raw outline if opening would erase most of a small landmass.
+        if not opened.is_empty and opened.area > 0.5 * outline.area:
+            outline = opened
+    minx, miny, maxx, maxy = outline.bounds
+
+    # ── 1. Lattice candidates with a signed distance to the outline ─────────
+    # Grow the bounding box by one ring if it is too small to hold the quota
+    # (thin shapes, or an outline smaller than a single cell).
+    pad = 1
+    while True:
+        xs = np.arange(minx - pad * cell_size + half, maxx + pad * cell_size, cell_size)
+        ys = np.arange(miny - pad * cell_size + half, maxy + pad * cell_size, cell_size)
+        if xs.size and ys.size:
+            xx, yy = np.meshgrid(xs, ys)
+            cx_all = xx.ravel()
+            cy_all = yy.ravel()
+            pts = shapely.points(cx_all, cy_all)
+            inside = shapely.contains_xy(outline, cx_all, cy_all)
+            d_boundary = shapely.distance(outline.boundary, pts)
+            d_outline = shapely.distance(outline, pts)
+            signed = np.where(inside, d_boundary, -d_outline)
+            if signed.size >= n_cells or pad > 8:
+                break
+        pad += 1
+
+    # Deepest interior cells first, then exterior cells nearest the outline.
+    # Multi-part outlines (archipelagos) and tiny landmasses grow one connected
+    # footprint instead, so they do not scatter into low-compactness islets.
+    parts = list(outline.geoms) if hasattr(outline, "geoms") else [outline]
+    if len(parts) > 1 or n_cells <= 4:
+        nx = xs.size
+        score = signed.reshape(ys.size, nx)
+        start = int(np.argmax(score))
+        sj, si = divmod(start, nx)
+        seen = {start}
+        heap = [(-float(score[sj, si]), start)]
+        chosen: list[int] = []
+        while heap and len(chosen) < n_cells:
+            _, idx = heapq.heappop(heap)
+            chosen.append(idx)
+            j, i = divmod(idx, nx)
+            for dj, di in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                jj, ii = j + dj, i + di
+                if 0 <= jj < ys.size and 0 <= ii < nx:
+                    k = jj * nx + ii
+                    if k not in seen:
+                        seen.add(k)
+                        heapq.heappush(heap, (-float(score[jj, ii]), k))
+        order = np.array(chosen, dtype=int)
+    else:
+        order = np.argsort(-signed, kind="stable")[:n_cells]
+    cell_x = cx_all[order]
+    cell_y = cy_all[order]
+
+    # ── 2. Seeds: representative points of the deformed regions ─────────────
+    reps = shaped.geometry.representative_point()
+    seed_x = reps.x.to_numpy(dtype=float)
+    seed_y = reps.y.to_numpy(dtype=float)
+    region_ids = shaped["region_id"].to_numpy()
+
+    # ── 3./4. Exact-capacity assignment + Lloyd refinement ──────────────────
+    col_region = np.repeat(np.arange(len(names)), caps)
+
+    def assign(sx: np.ndarray, sy: np.ndarray) -> np.ndarray:
+        dx = cell_x[:, np.newaxis] - sx[col_region][np.newaxis, :]
+        dy = cell_y[:, np.newaxis] - sy[col_region][np.newaxis, :]
+        cost = dx * dx + dy * dy
+        rows, cols = linear_sum_assignment(cost)
+        result = np.empty(n_cells, dtype=int)
+        result[rows] = col_region[cols]
+        return result
+
+    assigned = assign(seed_x, seed_y)
+    for _ in range(max(int(lloyd_iterations), 0)):
+        new_x = seed_x.copy()
+        new_y = seed_y.copy()
+        for i in range(len(names)):
+            if caps[i] <= 0:
+                continue
+            mask = assigned == i
+            if not mask.any():
+                continue
+            new_x[i] = 0.5 * float(cell_x[mask].mean()) + 0.5 * seed_x[i]
+            new_y[i] = 0.5 * float(cell_y[mask].mean()) + 0.5 * seed_y[i]
+        seed_x, seed_y = new_x, new_y
+        assigned = assign(seed_x, seed_y)
+
+    assigned = _repair_fragments(
+        cell_x, cell_y, assigned, seed_x, seed_y, caps, cell_size
+    )
+
+    # ── 5. Standard cell frame ──────────────────────────────────────────────
+    recs = {
+        "cx": cell_x,
+        "cy": cell_y,
+        "region_id": region_ids[assigned],
+        "region_name": [names[i] for i in assigned],
+        "landmass_id": np.full(n_cells, landmass_id, dtype=int),
+    }
+    frame = gpd.GeoDataFrame(
+        recs,
+        geometry=shapely.box(
+            cell_x - half, cell_y - half, cell_x + half, cell_y + half
+        ),
+        crs=shaped.crs,
+    )
+    return frame.reset_index(drop=True)
 
 
 def fit_quota(

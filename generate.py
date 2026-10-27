@@ -15,6 +15,7 @@ Usage
     python generate.py ESP --mode compare    # area + population side by side
     python generate.py ESP DEU --mode area   # land-area maps, batch
     python generate.py ESP --n 1500          # finer detail
+    python generate.py ESP --layout compact  # compact population blobs
     python generate.py ESP --out maps        # custom output folder
     python generate.py ESP --palette databites --background solid
     python generate.py ESP --mainland        # mainland only, no territories
@@ -88,10 +89,13 @@ FOREST = "#1A3829"  # DataBites brand dark green, used for the arrow
 
 
 def _build(GridClass, iso, args):
-    grid = GridClass(
-        iso, n=args.n, cluster_distance_km=args.cluster,
+    kwargs = dict(
+        n=args.n, cluster_distance_km=args.cluster,
         palette=resolve_palette(args.palette), dissolve_by=resolve_dissolve(args.dissolve),
     )
+    if issubclass(GridClass, PopGrid):
+        kwargs["layout"] = args.layout
+    grid = GridClass(iso, **kwargs)
     grid.build()
     return grid
 
@@ -234,6 +238,9 @@ def main() -> int:
                    help="qual | databites | bold | #hex,#hex,… (default: qual).")
     p.add_argument("--dissolve", default="auto", metavar="COLUMN",
                    help="Dissolve admin-1 by: auto | region | none (default: auto).")
+    p.add_argument("--layout", default="auto", choices=["auto", "cartogram", "compact"],
+                   help="Population cell layout: auto | cartogram | compact "
+                        "(default: auto, per-country recommendation).")
 
     # Plot options
     p.add_argument("--scope", default="all", choices=["all", "islands", "mainland"],
@@ -297,10 +304,13 @@ def main() -> int:
                 blocks = f"{ag.total_cells}/{pg.total_cells}"
             else:
                 GridClass = PopGrid if args.mode == "pop" else AreaGrid
-                grid = GridClass(
-                    iso, n=args.n, cluster_distance_km=args.cluster,
+                kwargs = dict(
+                    n=args.n, cluster_distance_km=args.cluster,
                     palette=palette, dissolve_by=dissolve,
                 )
+                if GridClass is PopGrid:
+                    kwargs["layout"] = args.layout
+                grid = GridClass(iso, **kwargs)
                 grid.build()
                 fig = grid.plot(
                     title=title_for(iso, args.mode, args.title),

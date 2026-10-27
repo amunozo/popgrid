@@ -12,7 +12,7 @@ popgrid turns a country (or any set of regions) into a block cartogram where **e
   <img src="https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_compare.png" width="100%" alt="Land area vs population of Spain, side by side">
 </p>
 
-Spain is drawn by its 52 provinces. Madrid and Barcelona are slivers of land and giants of population; Soria, Teruel and Cuenca, huge on the land map, almost vanish. A block on the left is the same size as a block on the right, so the comparison is literally true. (Prefer the 17 autonomous communities? Pass `dissolve_by="region"`.)
+Spain is drawn by its 52 provinces. Madrid and Barcelona are slivers of land and giants of population; Soria, Teruel and Cuenca, huge on the land map, almost vanish. A block on the left is the same size as a block on the right, so the comparison is literally true. Provinces are drawn as compact blobs (`layout="compact"`) because keeping every real border would squeeze Madrid's neighbours into one-block rings; pass `layout="cartogram"` for the border-preserving version, or `dissolve_by="region"` for the 17 autonomous communities.
 
 ---
 

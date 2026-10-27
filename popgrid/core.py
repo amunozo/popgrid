@@ -645,6 +645,7 @@ class AreaGrid:
         title: Optional[str] = None,
         subtitle: Optional[str] = None,
         data_source: Optional[str] = None,
+        layout: str = "auto",
     ) -> "AreaGrid":
         """
         Build an AreaGrid or PopGrid from any GeoDataFrame — no Natural Earth
@@ -680,6 +681,9 @@ class AreaGrid:
         title:
             Figure title.  If ``None``, defaults to ``"A Tiled Map"``.
             Pass a custom string to override, e.g. ``"My Region Map"``.
+        layout:
+            PopGrid only: ``'cartogram'`` or ``'compact'``.  ``'auto'``
+            (default) means ``'cartogram'`` for custom data.
 
         Returns
         -------
@@ -710,6 +714,13 @@ class AreaGrid:
         instance.cluster_distance_km = cluster_distance_km
         instance.palette = palette
         instance.dissolve_by = None
+        if issubclass(cls, PopGrid):
+            # Custom GeoDataFrames default to the contiguous-cartogram pipeline.
+            if layout not in ("auto", "cartogram", "compact"):
+                raise ValueError(
+                    f"layout must be 'auto', 'cartogram' or 'compact', got {layout!r}."
+                )
+            instance.layout = "cartogram" if layout == "auto" else layout
         instance._custom_gdf = gdf
         instance._custom_region_col = region_col
         instance._custom_weight_col = weight_col
@@ -831,7 +842,45 @@ class PopGrid(AreaGrid):
         Target number of cells.  Default 1000.
     dissolve_by, palette, cluster_distance_km, title, subtitle, data_source:
         Same as :class:`AreaGrid`.
+    layout:
+        Cell-layout strategy.  ``'auto'`` (default) resolves to the
+        per-country recommendation in
+        :data:`popgrid.data.RECOMMENDED_SETTINGS` (``'cartogram'`` for
+        unlisted countries and custom GeoDataFrames).  ``'cartogram'`` is the
+        contiguous Dougenik cartogram: regions keep their real borders and
+        their areas track population.  ``'compact'`` keeps the deformed
+        silhouette and region positions but re-tiles each landmass into
+        compact population blobs, which avoids the one-cell rings a
+        border-preserving cartogram can squeeze around a dominant region
+        (e.g. Madrid).
     """
+
+    def __init__(
+        self,
+        country_iso3: str,
+        n: int = 1000,
+        cluster_distance_km: float = 200.0,
+        palette: str | list[str] = "qual",
+        dissolve_by: Optional[str] = "auto",
+        title: Optional[str] = None,
+        subtitle: Optional[str] = None,
+        data_source: Optional[str] = None,
+        layout: str = "auto",
+    ) -> None:
+        super().__init__(
+            country_iso3, n=n, cluster_distance_km=cluster_distance_km,
+            palette=palette, dissolve_by=dissolve_by, title=title,
+            subtitle=subtitle, data_source=data_source,
+        )
+        if layout not in ("auto", "cartogram", "compact"):
+            raise ValueError(
+                f"layout must be 'auto', 'cartogram' or 'compact', got {layout!r}."
+            )
+        if layout == "auto":
+            layout = RECOMMENDED_SETTINGS.get(
+                self.country_iso3, {}
+            ).get("layout", "cartogram")
+        self.layout = layout
 
     def build(self) -> "PopGrid":
         """
@@ -859,6 +908,12 @@ class PopGrid(AreaGrid):
         5. Fit every region to its exact quota (trim ragged edges / grow
            into concavities) so the totals are precise.
 
+        With ``layout='compact'``, steps 4–5 are replaced: the deformed outline
+        and region positions from steps 2–3 are re-tiled into compact
+        population blobs with exact quotas (see
+        :func:`popgrid.cartogram.compact_assign`), so no quota/topology fitting
+        is needed afterwards.
+
         Rendering then reuses the AreaGrid figure builder, so the population
         cartogram inherits the full DataBites styling (grid, palette, region
         borders, title, detached-territory inset panels).
@@ -866,6 +921,7 @@ class PopGrid(AreaGrid):
         from .cartogram import (
             dougenik_cartogram, scale_to_area, fit_quota,
             real_adjacency, enforce_topology, fill_gaps, balance_quotas,
+            compact_assign,
         )
 
         # ── 1. Load regions ────────────────────────────────────────────────
@@ -1056,31 +1112,43 @@ class PopGrid(AreaGrid):
             # other, so every interior cell is rasterised (and assigned to its
             # nearest region) instead of dropping through the seams.
             outline = _fill_outline_holes(outline)
-            cells = generate_cells(outline, shaped, self._cell_size, lm.id)
+            if self.layout == "compact":
+                cells = compact_assign(
+                    shaped, outline, quotas, self._cell_size, lm.id
+                )
+            else:
+                cells = generate_cells(outline, shaped, self._cell_size, lm.id)
             if not cells.empty:
                 cell_frames.append(cells)
             meta.append(entry)
 
         # ── 6. Fit to exact per-region quotas, then enforce real borders ───
-        logger.info("[6/6] Fitting quotas and enforcing real-border topology …")
+        if self.layout == "compact":
+            logger.info("[6/6] Anchoring compact population cells …")
+        else:
+            logger.info("[6/6] Fitting quotas and enforcing real-border topology …")
         if cell_frames:
             all_cells = gpd.GeoDataFrame(
                 pd.concat(cell_frames, ignore_index=True), crs=cell_frames[0].crs
             )
-            # Gap-free rasterisation (filled outline) feeds quota fitting and
-            # border enforcement; a final fill_gaps mops up the few seams that
-            # quota-trimming re-opens at internal region borders.
-            all_cells = fit_quota(all_cells, quotas, self._cell_size)
-            radj = real_adjacency(self._regions_proj)
-            all_cells = enforce_topology(all_cells, radj, quotas, self._cell_size)
-            all_cells = fill_gaps(all_cells, self._cell_size, quotas=quotas)
-            # Last quota step: force every region to its exact Hamilton quota.
-            # The shape/topology passes above cannot grow an enclosed region or
-            # shed a topology-connector ring, so exact counts are guaranteed
-            # here (real borders and contiguity are best-effort preferences).
-            all_cells = balance_quotas(
-                all_cells, quotas, self._cell_size, radj
-            )
+            if self.layout != "compact":
+                # Gap-free rasterisation (filled outline) feeds quota fitting and
+                # border enforcement; a final fill_gaps mops up the few seams that
+                # quota-trimming re-opens at internal region borders.
+                all_cells = fit_quota(all_cells, quotas, self._cell_size)
+                radj = real_adjacency(self._regions_proj)
+                all_cells = enforce_topology(all_cells, radj, quotas, self._cell_size)
+                all_cells = fill_gaps(all_cells, self._cell_size, quotas=quotas)
+                # Last quota step: force every region to its exact Hamilton quota.
+                # The shape/topology passes above cannot grow an enclosed region or
+                # shed a topology-connector ring, so exact counts are guaranteed
+                # here (real borders and contiguity are best-effort preferences).
+                all_cells = balance_quotas(
+                    all_cells, quotas, self._cell_size, radj
+                )
+            # Compact cells already have exact capacities, so they skip the
+            # quota/topology passes entirely; anchoring and lattice snapping
+            # below are shared with the cartogram layout.
             # Re-anchor detached territories to the *deformed* mainland frame so
             # they keep their geographic bearing relative to the cartogram (this
             # is why an enclave like Melilla must not drift into a panel).
