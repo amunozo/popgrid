@@ -754,6 +754,28 @@ class AreaGrid:
         return f"AreaGrid({source}, n={self.n})  [{status}]"
 
 
+def _border_groups(regions: gpd.GeoDataFrame) -> list[set[str]]:
+    """Split regions into groups connected by shared borders."""
+    from .cartogram import real_adjacency
+
+    adj = real_adjacency(regions)
+    groups: list[set[str]] = []
+    seen: set[str] = set()
+    for start in regions["region_name"]:
+        if start in seen:
+            continue
+        group, stack = {start}, [start]
+        seen.add(start)
+        while stack:
+            for nb in adj.get(stack.pop(), ()):
+                if nb not in seen:
+                    seen.add(nb)
+                    group.add(nb)
+                    stack.append(nb)
+        groups.append(group)
+    return groups
+
+
 def _fill_outline_holes(geom):
     """
     Return ``geom`` with all interior rings removed (only exterior boundaries
@@ -1116,9 +1138,25 @@ class PopGrid(AreaGrid):
             # nearest region) instead of dropping through the seams.
             outline = _fill_outline_holes(outline)
             if self.layout == "compact":
-                cells = compact_assign(
-                    shaped, outline, quotas, self._cell_size, lm.id
-                )
+                # Regions that share no border (e.g. the two Canary provinces,
+                # each its own group of islands) are tiled separately, so each
+                # keeps its own footprint instead of merging into one blob.
+                groups = _border_groups(shaped)
+                parts = []
+                for group in groups:
+                    sub = shaped[shaped["region_name"].isin(group)]
+                    sub_outline = (
+                        outline if len(groups) == 1
+                        else _fill_outline_holes(
+                            shapely.make_valid(sub.geometry.union_all())
+                        )
+                    )
+                    parts.append(compact_assign(
+                        sub, sub_outline, quotas, self._cell_size, lm.id
+                    ))
+                cells = gpd.GeoDataFrame(
+                    pd.concat(parts, ignore_index=True), crs=parts[0].crs
+                ) if len(parts) > 1 else parts[0]
             else:
                 cells = generate_cells(outline, shaped, self._cell_size, lm.id)
             if not cells.empty:

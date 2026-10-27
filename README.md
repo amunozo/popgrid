@@ -31,16 +31,16 @@ Requires Python 3.10+. Country boundaries are downloaded once from Natural Earth
 ```python
 from popgrid import PopGrid, AreaGrid
 
-# Population: every block = 0.1% of the national population
-PopGrid("ESP").plot().savefig("spain_population.png", dpi=170, bbox_inches="tight")
-
 # Land area: every block = 0.1% of the national land area
 AreaGrid("ESP").plot().savefig("spain_area.png", dpi=170, bbox_inches="tight")
+
+# Population: every block = 0.1% of the national population
+PopGrid("ESP").plot().savefig("spain_population.png", dpi=170, bbox_inches="tight")
 ```
 
-| Population | Land area |
+| Land area | Population |
 |---|---|
-| ![Population of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_pop.png) | ![Land area of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_area.png) |
+| ![Land area of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_area.png) | ![Population of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_pop.png) |
 
 `.plot()` builds the grid on first call and returns a Matplotlib figure, so you can save, show, or restyle it however you like.
 
