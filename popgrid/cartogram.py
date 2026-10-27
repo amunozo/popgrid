@@ -745,3 +745,252 @@ def fill_gaps(
     if not out_frames:
         return cells.iloc[:0].copy()
     return gpd.GeoDataFrame(pd.concat(out_frames, ignore_index=True), crs=cells.crs)
+
+
+# ── Exact quota balancing (final step of PopGrid quota handling) ───────────────
+
+def balance_quotas(
+    cells: gpd.GeoDataFrame,
+    quotas: dict[str, int],
+    cell_size: float,
+    real_adj: dict[str, set] | None = None,
+) -> gpd.GeoDataFrame:
+    """
+    Force every region's cell count to **exactly** ``quotas[region]``.
+
+    ``fit_quota`` / ``enforce_topology`` / ``fill_gaps`` are shape- and
+    topology-driven: they can only grow a region into *empty* lattice cells
+    next to it and only trim from the outer silhouette, so a region enclosed by
+    others (Madrid, Toledo) can never reach its quota, and a connector that grew
+    a legal ring around it (Cuenca) cannot shed the ring cells.  This pass is
+    quota-driven instead: exact counts are a hard guarantee, while real-border
+    topology and contiguity are best-effort preferences.
+
+    Two phases, per landmass (lattice indices derived from each landmass's own
+    cell positions, exactly like :func:`fit_quota`):
+
+    a. **Fix the landmass total** so it equals the sum of the quotas of the
+       regions present.  If short, add empty cells adjacent to the silhouette
+       (most occupied 4-neighbours first, i.e. concavities before spikes), each
+       labelled with the adjacent region that is furthest below quota.  If over,
+       remove silhouette cells (a cell with an empty 4-neighbour can always go
+       without punching an interior hole), most over-quota region first, and
+       within a region the cell with the most empty neighbours.
+
+    b. **Move surplus inwards.**  While a region R is over quota, BFS over the
+       lattice region-adjacency graph (regions whose cells are 4-adjacent) to
+       the *nearest* region U that is under quota.  For the path
+       ``R = X0 → X1 → … → Xk = U`` one cell is transferred across every hop,
+       starting at the U end (``Xk-1 → Xk``, then ``Xk-2 → Xk-1``, …), so each
+       intermediate region ends up with the same count it started with.  For a
+       hop ``X → Y`` the cell of X adjacent to Y is chosen preferring
+       (1) X stays 4-connected *and* relabelling is topology-legal (every
+       4-neighbour of the cell is Y, a real neighbour of Y, or empty),
+       (2) X stays 4-connected, (3) anything; within a tier the cell with the
+       most Y neighbours wins (compact transfer).  Every path transfer lowers
+       ``Σ |count − quota|`` by two, so the loop terminates.
+    """
+    import pandas as pd
+    from collections import Counter, deque
+
+    real_adj = real_adj or {}
+    if cells is None or cells.empty:
+        return cells
+
+    out_frames = []
+    for lm_id, lm_cells in cells.groupby("landmass_id"):
+        minx = float(lm_cells["cx"].min())
+        miny = float(lm_cells["cy"].min())
+
+        def key(cx, cy):
+            return (round((cx - minx) / cell_size), round((cy - miny) / cell_size))
+
+        def nbrs(k):
+            i, j = k
+            return ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1))
+
+        grid: dict[tuple[int, int], str] = {}
+        region_id_of: dict[str, int] = {}
+        for _, r in lm_cells.iterrows():
+            grid[key(r["cx"], r["cy"])] = r["region_name"]
+            region_id_of[r["region_name"]] = r["region_id"]
+
+        present = sorted(set(grid.values()))
+        quota = {n: max(int(quotas.get(n, 1)), 1) for n in present}
+        counts = Counter(grid.values())
+        target = sum(quota.values())
+
+        def region_keys(name):
+            return {k for k, v in grid.items() if v == name}
+
+        def connected_without(name, drop):
+            """Is ``name`` still 4-connected after removing ``drop``?"""
+            keys = region_keys(name)
+            keys.discard(drop)
+            if len(keys) <= 1:
+                return True
+            start = next(iter(keys))
+            seen = {start}
+            stack = [start]
+            while stack:
+                c = stack.pop()
+                for d in nbrs(c):
+                    if d in keys and d not in seen:
+                        seen.add(d)
+                        stack.append(d)
+            return len(seen) == len(keys)
+
+        def legal_at(region, k):
+            """Would relabelling cell ``k`` to ``region`` keep borders legal?"""
+            real = real_adj.get(region, set())
+            for d in nbrs(k):
+                o = grid.get(d)
+                if o is not None and o != region and o not in real:
+                    return False
+            return True
+
+        # ── (a) Pending total: grow into concavities or erode the outline ────
+        guard = 0
+        while sum(counts.values()) < target and guard < 200_000:
+            guard += 1
+            cands: dict[tuple[int, int], int] = {}
+            for k in grid:
+                for d in nbrs(k):
+                    if d not in grid:
+                        cands[d] = cands.get(d, 0) + 1
+            if not cands:
+                break
+            # Most occupied neighbours first (fill concavities); deterministic
+            # tie-break on lattice position.
+            best = max(cands, key=lambda c: (cands[c], -c[0], -c[1]))
+            owners = [grid[d] for d in nbrs(best) if d in grid]
+            # Hand it to the adjacent region furthest below its quota.
+            label = min(owners, key=lambda o: (counts[o] - quota[o], o))
+            grid[best] = label
+            counts[label] += 1
+
+        guard = 0
+        while sum(counts.values()) > target and guard < 200_000:
+            guard += 1
+            cands = []
+            for k, name in grid.items():
+                empty_nb = sum(1 for d in nbrs(k) if d not in grid)
+                if empty_nb == 0:
+                    continue  # interior cell: removing it would punch a hole
+                same_nb = sum(1 for d in nbrs(k) if grid.get(d) == name)
+                cands.append((counts[name] - quota[name], empty_nb, -same_nb, k))
+            cands.sort(reverse=True)
+            victim = None
+            for strict in (True, False):
+                for cand in cands:
+                    k = cand[-1]
+                    name = grid[k]
+                    if counts[name] <= 1:
+                        continue
+                    if strict and not connected_without(name, k):
+                        continue
+                    victim = k
+                    break
+                if victim is not None:
+                    break
+            if victim is None:
+                break
+            counts[grid.pop(victim)] -= 1
+
+        # ── (b) Flow surplus to the nearest under-quota region ──────────────
+        def adjacency():
+            adj: dict[str, set] = {n: set() for n in present}
+            for k, name in grid.items():
+                for d in nbrs(k):
+                    o = grid.get(d)
+                    if o is not None and o != name:
+                        adj[name].add(o)
+            return adj
+
+        def nearest_under(adj, root):
+            """Shortest region path root → some region below its quota."""
+            seen = {root}
+            parent: dict[str, str] = {}
+            queue = deque([root])
+            while queue:
+                cur = queue.popleft()
+                for nxt in sorted(adj.get(cur, ())):
+                    if nxt in seen:
+                        continue
+                    seen.add(nxt)
+                    parent[nxt] = cur
+                    if counts[nxt] < quota[nxt]:
+                        path = [nxt]
+                        while path[-1] != root:
+                            path.append(parent[path[-1]])
+                        path.reverse()
+                        return path
+                    # An intermediate region must survive the hop that empties
+                    # one of its cells (it gets one back afterwards).
+                    if counts[nxt] >= 2:
+                        queue.append(nxt)
+            return None
+
+        def pick_cell(src, dst):
+            """A cell of ``src`` 4-adjacent to ``dst``, best tier first."""
+            best, best_score = None, None
+            for k, name in grid.items():
+                if name != src:
+                    continue
+                dst_nb = sum(1 for d in nbrs(k) if grid.get(d) == dst)
+                if dst_nb == 0:
+                    continue
+                conn = connected_without(src, k)
+                if conn and legal_at(dst, k):
+                    tier = 0
+                elif conn:
+                    tier = 1
+                else:
+                    tier = 2
+                score = (-tier, dst_nb)
+                if best_score is None or score > best_score:
+                    best_score, best = score, k
+            return best
+
+        guard = 0
+        limit = 4 * (sum(counts.values()) + target) + 10_000
+        while guard < limit:
+            guard += 1
+            over = [n for n in present if counts[n] > quota[n]]
+            if not over:
+                break
+            root = max(over, key=lambda n: (counts[n] - quota[n], n))
+            path = nearest_under(adjacency(), root)
+            if path is None or len(path) < 2:
+                break
+            # One cell across every hop, starting at the deficit end, so the
+            # intermediate regions keep their counts.
+            moved = True
+            for src, dst in zip(reversed(path[:-1]), reversed(path[1:])):
+                cell = pick_cell(src, dst)
+                if cell is None or counts[src] <= 1:
+                    moved = False
+                    break
+                grid[cell] = dst
+                counts[src] -= 1
+                counts[dst] += 1
+            if not moved:
+                break
+
+        half = cell_size / 2.0
+        recs = {"cx": [], "cy": [], "region_id": [], "region_name": [], "landmass_id": []}
+        for (i, j), name in grid.items():
+            recs["cx"].append(minx + i * cell_size)
+            recs["cy"].append(miny + j * cell_size)
+            recs["region_id"].append(region_id_of[name])
+            recs["region_name"].append(name)
+            recs["landmass_id"].append(lm_id)
+        cx = np.array(recs["cx"]); cy = np.array(recs["cy"])
+        out_frames.append(gpd.GeoDataFrame(
+            recs, geometry=shapely.box(cx - half, cy - half, cx + half, cy + half),
+            crs=cells.crs,
+        ))
+
+    if not out_frames:
+        return cells.iloc[:0].copy()
+    return gpd.GeoDataFrame(pd.concat(out_frames, ignore_index=True), crs=cells.crs)

@@ -865,7 +865,7 @@ class PopGrid(AreaGrid):
         """
         from .cartogram import (
             dougenik_cartogram, scale_to_area, fit_quota,
-            real_adjacency, enforce_topology, fill_gaps,
+            real_adjacency, enforce_topology, fill_gaps, balance_quotas,
         )
 
         # ── 1. Load regions ────────────────────────────────────────────────
@@ -969,6 +969,9 @@ class PopGrid(AreaGrid):
             ].reset_index(drop=True)
             region_names = [n for n in region_names if n in keep]
             quotas = {n: q for n, q in quotas.items() if n in keep}
+        # Final integer quota per drawn region (Hamilton, zero-block regions
+        # dropped) — the contract balance_quotas() enforces to the cell.
+        self._quotas = dict(quotas)
 
         # ── 4. Detect landmasses ───────────────────────────────────────────
         logger.info("[4/6] Detecting landmasses …")
@@ -1071,6 +1074,13 @@ class PopGrid(AreaGrid):
             radj = real_adjacency(self._regions_proj)
             all_cells = enforce_topology(all_cells, radj, quotas, self._cell_size)
             all_cells = fill_gaps(all_cells, self._cell_size, quotas=quotas)
+            # Last quota step: force every region to its exact Hamilton quota.
+            # The shape/topology passes above cannot grow an enclosed region or
+            # shed a topology-connector ring, so exact counts are guaranteed
+            # here (real borders and contiguity are best-effort preferences).
+            all_cells = balance_quotas(
+                all_cells, quotas, self._cell_size, radj
+            )
             # Re-anchor detached territories to the *deformed* mainland frame so
             # they keep their geographic bearing relative to the cartogram (this
             # is why an enclave like Melilla must not drift into a panel).

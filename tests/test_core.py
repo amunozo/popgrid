@@ -361,3 +361,37 @@ def test_areagrid_from_geodataframe_ignores_weight():
     counts = _region_counts(ag)
     # Equal-area squares → roughly equal block counts.
     assert abs(int(counts["A"]) - int(counts["C"])) <= 0.25 * int(counts["A"])
+
+
+# ── PopGrid exact quotas ──────────────────────────────────────────────────────
+
+@pytest.fixture(scope="module")
+def esp_pop():
+    from popgrid import PopGrid
+    return PopGrid("ESP", n=1000).build()
+
+
+@pytest.fixture(scope="module")
+def deu_pop():
+    from popgrid import PopGrid
+    return PopGrid("DEU", n=1000).build()
+
+
+@pytest.mark.parametrize("fixture", ["esp_pop", "deu_pop"])
+def test_popgrid_every_region_matches_quota(fixture, request):
+    """Every drawn region gets exactly its Hamilton quota of blocks."""
+    pg = request.getfixturevalue(fixture)
+    counts = _region_counts(pg)
+    assert set(counts.index) <= set(pg._quotas)
+    for region, quota in pg._quotas.items():
+        assert int(counts.get(region, 0)) == quota, (
+            f"{region}: {int(counts.get(region, 0))} blocks, quota {quota}"
+        )
+
+
+@pytest.mark.parametrize("fixture", ["esp_pop", "deu_pop"])
+def test_popgrid_total_matches_quota_sum(fixture, request):
+    """Total cells equal the sum of quotas, i.e. all n blocks are drawn."""
+    pg = request.getfixturevalue(fixture)
+    assert sum(pg._quotas.values()) == pg.n
+    assert pg.total_cells == sum(pg._quotas.values())
