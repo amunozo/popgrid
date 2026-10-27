@@ -82,7 +82,7 @@ def test_germany_color_map_values_are_hex(germany):
         assert hex_pattern.match(color), f"Invalid hex color '{color}' for '{name}'"
 
 
-# ── Spain — dissolve to CCAA ──────────────────────────────────────────────────
+# ── Spain — default provinces; dissolve to CCAA ──────────────────────────────
 
 @pytest.fixture(scope="module")
 def spain():
@@ -91,8 +91,8 @@ def spain():
     return pg
 
 
-def test_spain_has_ccaa_not_provinces(spain):
-    # Should have 19 (17 CCAA + Ceuta + Melilla), not 52 provinces
+def test_spain_dissolved_has_ccaa_not_provinces(spain):
+    # Explicit dissolve_by='region' → 19 (17 CCAA + Ceuta + Melilla)
     assert len(spain.regions) == 19
 
 

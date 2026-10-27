@@ -12,6 +12,13 @@ All notable changes to popgrid are documented here.
   does not need ArcGIS.
 
 ### Changed
+- **Spain now defaults to its 52 provinces.** `AreaGrid("ESP")` / `PopGrid("ESP")`
+  render provinces (INE Census 2021 province populations) instead of the 19 autonomous
+  communities and cities. Pass `dissolve_by="region"` to keep the coarser
+  17 CCAA + Ceuta + Melilla view (province populations are summed up).
+- **Spanish population figures corrected.** The previous CCAA rows were labelled
+  "INE Census 2021" but were Padrón figures from mixed years (2016–2021). They are
+  now the actual INE Census 2021 province figures (national total 47,400,798).
 - `publish_hosted_feature_layer` now requires an authenticated `GIS` and raises a
   clear error instead of falling back to an anonymous session that cannot publish.
 

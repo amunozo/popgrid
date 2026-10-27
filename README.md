@@ -9,10 +9,10 @@
 popgrid turns a country (or any set of regions) into a block cartogram where **every block is an equal share of the whole**: 0.1% of the national land area, or 0.1% of the population. Same regions, same colours, two ways of seeing them. Where land and people diverge is the whole point.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_compare.png" width="100%" alt="Land area vs population of Spain, side by side">
+  <img src="https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_compare.png" width="100%" alt="Land area vs population of Spain, side by side">
 </p>
 
-Madrid is a sliver of land and a giant of population. The empty interior shrinks; the coasts and the capital swell. A block on the left is the same size as a block on the right, so the comparison is literally true.
+Spain is drawn by its 52 provinces. Madrid and Barcelona are slivers of land and giants of population; Soria, Teruel and Cuenca, huge on the land map, almost vanish. A block on the left is the same size as a block on the right, so the comparison is literally true. (Prefer the 17 autonomous communities? Pass `dissolve_by="region"`.)
 
 ---
 
@@ -40,7 +40,7 @@ AreaGrid("ESP").plot().savefig("spain_area.png", dpi=170, bbox_inches="tight")
 
 | Population | Land area |
 |---|---|
-| ![Population of Spain](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_pop.png) | ![Land area of Spain](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/spain_area.png) |
+| ![Population of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_pop.png) | ![Land area of Spain](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/spain_area.png) |
 
 `.plot()` builds the grid on first call and returns a Matplotlib figure, so you can save, show, or restyle it however you like.
 
@@ -76,7 +76,7 @@ Barcelona's 10 districts, built entirely from a custom GeoDataFrame. Eixample, t
 
 | Land area | Population |
 |---|---|
-| ![Land area of Barcelona](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/barcelona_area.png) | ![Population of Barcelona](https://raw.githubusercontent.com/databites-tech/popgrid/main/docs/img/barcelona_population.png) |
+| ![Land area of Barcelona](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/barcelona_area.png) | ![Population of Barcelona](https://raw.githubusercontent.com/amunozo/popgrid/main/docs/img/barcelona_population.png) |
 
 A full runnable version is in [`examples/barcelona.py`](examples/barcelona.py), using the district boundaries in [`examples/data/barcelona_districts.geojson`](examples/data/barcelona_districts.geojson).
 

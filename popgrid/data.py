@@ -11,7 +11,8 @@ administrative unit.  The granularity differs per country:
   Germany (DEU)           16     Bundesländer  No  (already right)
   France  (FRA)          101     Départements  Yes → 'region' → 18 Régions
   Italy   (ITA)          110     Province      Yes → 'region' → 20 Regioni
-  Spain   (ESP)           52     Provincias    Yes → 'region' → 17+2 CCAA
+  Spain   (ESP)           52     Provincias    No  (already right;
+                                                    'region' → 17+2 CCAA)
   UK      (GBR)          232     Districts     No  ('region' gives English
                                                     sub-regions, not nations)
   USA     (USA)           51     States        No  ('region'=Census division)
@@ -55,7 +56,7 @@ _NE_SHP = "ne_10m_admin_1_states_provinces.shp"
 # Only countries where dissolve_by='region' has been verified to give the
 # correct, human-meaningful parent regions.
 KNOWN_DISSOLVE: dict[str, str] = {
-    "ESP": "region",  # 52 provinces → 17 CCAA + Ceuta + Melilla
+    "ESP": "region",  # optional: 52 provinces → 17 CCAA + Ceuta + Melilla
     "ITA": "region",  # 110 province → 20 regioni
     "FRA": "region",  # 101 départements → 18 régions
     "PHL": "region",  # 118 provinces → 17 regions
@@ -64,6 +65,7 @@ KNOWN_DISSOLVE: dict[str, str] = {
 # Countries where admin-1 is already the right display level.
 # dissolve_by=None is correct — listed here for documentation.
 ADMIN1_IS_CORRECT: list[str] = [
+    "ESP",  # 52 provinces (region = 17 CCAA + Ceuta + Melilla)
     "DEU",  # 16 Bundesländer
     "USA",  # 51 states (region = census division — too coarse)
     "BRA",  # 27 states
@@ -82,12 +84,12 @@ ADMIN1_IS_CORRECT: list[str] = [
 # Run ``python examples/inspect_country.py <ISO3>`` to check any country.
 RECOMMENDED_SETTINGS: dict[str, dict] = {
     # ── dissolve_by='region' gives the correct admin-1 parent level ──────────
-    "ESP": {"dissolve_by": "region"},  # 52 provinces  → 19 CCAA
     "ITA": {"dissolve_by": "region"},  # 110 province  → 20 regioni
     "FRA": {"dissolve_by": "region"},  # 101 depts     → 18 régions
     "PHL": {"dissolve_by": "region"},  # 118 provinces → 17 regions
 
     # ── Already at the correct admin-1 level (no dissolve needed) ────────────
+    "ESP": {"dissolve_by": None},   # 52 provinces
     "DEU": {"dissolve_by": None},   # 16 Bundesländer
     "USA": {"dissolve_by": None},   # 51 states  ← 'region' = census division (4 groups, wrong)
     "BRA": {"dissolve_by": None},   # 27 states
@@ -124,7 +126,7 @@ RECOMMENDED_SETTINGS: dict[str, dict] = {
 # Used in the default figure title: "{Country} by {label} in a square-based grid"
 # For dissolve_by='region' countries the label reflects the PARENT level.
 REGION_LABELS: dict[str, str] = {
-    "ESP": "Autonomous Communities",   # CCAA
+    "ESP": "Provinces",               # 52 provincias (dissolve to CCAA via "region")
     "ITA": "Regions",                  # dissolved from 110 province → 20 regioni
     "FRA": "Regions",                  # dissolved from 101 depts → 18 régions
     "PHL": "Regions",                  # dissolved from 118 provinces → 17 regions
